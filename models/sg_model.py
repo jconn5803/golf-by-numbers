@@ -10,7 +10,10 @@ def expected_shots_calc(distance_from_hole, lie):
     if lie == "In the Hole":
         return 0
     # Load in the expected strokes df
-    expected_df = pd.read_csv(r"C:\Users\jconn\Desktop\GolfByNumbers\models\data\strokes_gained_benchmark.csv")
+    # Build the file path dynamically based on the current file location
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(base_dir, "data", "strokes_gained_benchmark.csv")
+    expected_df = pd.read_csv(data_path)
     # Only store the lie we are interested in
     expected_df = expected_df[expected_df["lie"] == f"{lie}"]
 
