@@ -4,8 +4,12 @@ from models.unit_converter import metres_to_yards, metres_to_feet
 
 # Import database modules
 from config import Config
-from models import db, init_app
+from models import db, init_app, User
 from flask_migrate import Migrate
+
+# Import login modules
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"
@@ -14,6 +18,67 @@ app.config.from_object(Config)
 # Initialize the database
 init_app(app)
 migrate = Migrate(app, db)
+
+# Initialse the flask login 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Redirect users to the login page if not logged in
+
+@login_manager.user_loader
+def load_user(userID):
+    return User.query.get(int(userID))
+
+# Route for user signup
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Check if user already exists
+        user_exists = User.query.filter((User.username == username) | (User.email == email)).first()
+        if user_exists:
+            return "User already exists", 400
+
+        # Hash the password
+        hashed_password = generate_password_hash(password)
+
+        # Create a new user
+        new_user = User(username=username, email=email, password_hash=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        return "User registered successfully!", 200
+
+    return render_template('register.html')
+
+# Route for user login 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Fetch the user from the database
+        user = User.query.filter_by(email=email).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            return "Invalid credentials", 401
+
+        # Log the user in
+        login_user(user)
+        return "Logged in successfully!", 200
+
+    return render_template('login.html')
+
+# Add a route for user logout
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return "Logged out successfully!", 200
+
+
 
 
 @app.route('/', methods=['GET', 'POST'])
