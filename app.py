@@ -2,8 +2,19 @@ from flask import Flask, render_template, request, session
 from models.sg_model import SG_calculator  # Import your SG calculator model
 from models.unit_converter import metres_to_yards, metres_to_feet
 
+# Import database modules
+from config import Config
+from models import db, init_app
+from flask_migrate import Migrate
+
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"
+app.config.from_object(Config)
+
+# Initialize the database
+init_app(app)
+migrate = Migrate(app, db)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
