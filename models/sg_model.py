@@ -38,3 +38,27 @@ def SG_calculator(distance_before, lie_before, distance_after, lie_after):
     expected_after = expected_shots_calc(distance_after, lie_after)
 
     return round(expected_before - expected_after - 1, 2) # Round to 2dp
+
+def shot_type_func(lie, distance, par):
+    """This function categorises the current shot based upon the lie, distance and hole par"""
+
+    # Define Putting Category
+    if lie == "Green":
+        return "Putting"
+    
+    # Define the off the Tee category
+    elif lie == "Tee" and par == 3:
+        return "Approach" # Tee shots on Par 3s are approach shots
+    
+    elif lie == "Tee":
+        return "Off the Tee"
+    
+    # Define the short game category
+    elif distance < 30 and lie != "Green":
+        return "Around the Green"
+    
+    # All other shots should be approach by default
+    else:
+        return "Approach"
+    
+

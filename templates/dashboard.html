@@ -1,0 +1,646 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Dashboard with Multiple Tabs
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">User Dashboard</h1>
+
+<!-- FILTER FORM -->
+<form id="filterForm" class="row g-3 mb-4">
+  <!-- Course filter -->
+  <div class="col-auto">
+    <label for="course" class="form-label">Course:</label>
+    <select class="form-control" name="course" id="course">
+      <option value="">All Courses</option>
+      {% for c in user_courses %}
+      <option value="{{ c.courseID }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Round filter -->
+  <div class="col-auto">
+    <label for="round" class="form-label">Round:</label>
+    <select class="form-control" name="round" id="round">
+      <option value="">All Rounds</option>
+      {% for r in user_rounds %}
+      <option value="{{ r.roundID }}">
+        {{ r.course.name }} - {{ r.date_played }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Date range filter -->
+  <div class="col-auto">
+    <label for="startDate" class="form-label">Start Date:</label>
+    <input type="date" class="form-control" name="startDate" id="startDate" />
+  </div>
+  <div class="col-auto">
+    <label for="endDate" class="form-label">End Date:</label>
+    <input type="date" class="form-control" name="endDate" id="endDate" />
+  </div>
+
+  <div class="col-auto mt-4">
+    <button type="submit" class="btn btn-primary mt-2">Apply Filters</button>
+  </div>
+</form>
+
+<!-- BOOTSTRAP TABS NAVIGATION -->
+<ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+  <!-- Overall Tab -->
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="overall-tab" data-bs-toggle="tab"
+      data-bs-target="#overallTabPane" type="button" role="tab"
+      aria-controls="overallTabPane" aria-selected="true">
+      Overall
+    </button>
+  </li>
+  <!-- Tee Tab -->
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tee-tab" data-bs-toggle="tab"
+      data-bs-target="#teeTabPane" type="button" role="tab"
+      aria-controls="teeTabPane" aria-selected="false">
+      Tee
+    </button>
+  </li>
+  <!-- Approach Tab -->
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="approach-tab" data-bs-toggle="tab"
+      data-bs-target="#approachTabPane" type="button" role="tab"
+      aria-controls="approachTabPane" aria-selected="false">
+      Approach
+    </button>
+  </li>
+  <!-- Short Game Tab -->
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="shortgame-tab" data-bs-toggle="tab"
+      data-bs-target="#shortGameTabPane" type="button" role="tab"
+      aria-controls="shortGameTabPane" aria-selected="false">
+      Short Game
+    </button>
+  </li>
+  <!-- Putting Tab -->
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="putting-tab" data-bs-toggle="tab"
+      data-bs-target="#puttingTabPane" type="button" role="tab"
+      aria-controls="puttingTabPane" aria-selected="false">
+      Putting
+    </button>
+  </li>
+</ul>
+
+<!-- TAB CONTENT CONTAINER -->
+<div class="tab-content" id="dashboardTabsContent">
+  <!-- Overall Tab Pane -->
+  <div class="tab-pane fade show active p-3" id="overallTabPane" role="tabpanel" aria-labelledby="overall-tab">
+    <h4>Overall</h4>
+
+    <!-- Example Cards -->
+    <div class="row mb-3">
+      <!-- Scoring Average card -->
+      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Scoring Average</h6>
+            <h3 class="card-title" id="scoringAvgCard">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Score vs Par card -->
+      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Scoring vs. Par</h6>
+            <h3 class="card-title" id="scoringVsParCard">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Total Rounds card -->
+      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Total Rounds</h6>
+            <h3 class="card-title" id="totalRoundsCard">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Par 3 Average -->
+      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Par 3 Avg</h6>
+            <h3 class="card-title" id="par3Card">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Par 4 Average -->
+      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Par 4 Avg</h6>
+            <h3 class="card-title" id="par4Card">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Par 5 Average -->
+      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Par 5 Avg</h6>
+            <h3 class="card-title" id="par5Card">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strokes Gained Chart -->
+    <h5>Strokes Gained Chart</h5>
+    <canvas id="sgChart" width="400" height="200"></canvas>
+
+    <!-- Distance Histogram -->
+    <h5>Shot Distance Histogram</h5>
+    <canvas id="distanceHistogram" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Tee Tab Pane -->
+  <div class="tab-pane fade p-3" id="teeTabPane" role="tabpanel" aria-labelledby="tee-tab">
+    <h4>Tee Stats</h4>
+    <div class="row mb-3">
+      <!-- Card 1: Off the Tee SG -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">SG Off the Tee</h6>
+            <h3 class="card-title" id="teeSGCard">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Card 2: Average Tee Distance -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Avg Tee Distance</h6>
+            <h3 class="card-title" id="teeDistanceCard">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Miss Direction Fairway Visualization -->
+    <h5>Miss Direction Visualization</h5>
+    <div id="fairwayContainer" style="
+        width: 100%;
+        max-width: 500px; 
+        height: 60px; 
+        background-color: #567d46; /* A greenish color for the fairway */
+        position: relative; 
+        border-radius: 30px;      /* Rounded ends to mimic a fairway shape */
+        margin-bottom: 1em;
+        overflow: hidden;
+    ">
+      <!-- Left Miss section -->
+      <div id="leftMissSection" style="
+          position: absolute; 
+          left: 0; 
+          top: 0; 
+          height: 100%; 
+          background-color: rgba(255, 0, 0, 0.3);
+          text-align: center;
+          line-height: 60px; 
+          color: #fff; 
+          font-weight: bold;
+      ">
+        <!-- Will fill in left % via JS -->
+      </div>
+
+      <!-- Center (Fairway) section -->
+      <div id="centerHitSection" style="
+          position: absolute; 
+          top: 0; 
+          height: 100%; 
+          background-color: rgba(255,255,255, 0.3);
+          text-align: center; 
+          line-height: 60px; 
+          color: #fff; 
+          font-weight: bold;
+      ">
+        <!-- Will fill in center % via JS -->
+      </div>
+
+      <!-- Right Miss section -->
+      <div id="rightMissSection" style="
+          position: absolute; 
+          top: 0; 
+          height: 100%; 
+          background-color: rgba(255, 0, 0, 0.3);
+          text-align: center;
+          line-height: 60px; 
+          color: #fff; 
+          font-weight: bold;
+      ">
+        <!-- Will fill in right % via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach Tab Pane -->
+  <div class="tab-pane fade p-3" id="approachTabPane" role="tabpanel" aria-labelledby="approach-tab">
+    <h4>Approach Stats</h4>
+
+    <div class="row mb-3">
+      <!-- Card: Average SG Approach -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Avg SG Approach</h6>
+            <h3 class="card-title" id="approachSGCard">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Card: % GIR (Approach) -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">% GIR</h6>
+            <h3 class="card-title" id="approachGirCard">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Approach Miss Directions Chart -->
+    <h5>Approach Miss Directions</h5>
+    <canvas id="approachMissChart" width="400" height="400" style="transform: rotate(22.5deg);"></canvas>
+  </div>
+
+  <!-- Short Game Tab Pane -->
+  <div class="tab-pane fade p-3" id="shortGameTabPane" role="tabpanel" aria-labelledby="shortgame-tab">
+    <h4>Short Game Stats</h4>
+
+    <div class="row mb-3">
+      <!-- Card: Up & Down Percentage -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Up & Down %</h6>
+            <h3 class="card-title" id="upDownPercentCard">--</h3>
+          </div>
+        </div>
+      </div>
+      <!-- Card: SG Around the Green -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">SG Around the Green</h6>
+            <h3 class="card-title" id="aroundGreenSGCard">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Putting Tab Pane -->
+  <div class="tab-pane fade p-3" id="puttingTabPane" role="tabpanel" aria-labelledby="putting-tab">
+    <h4>Putting Stats</h4>
+    <div class="row mb-3">
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">SG Putting</h6>
+            <h3 class="card-title" id="puttingSGCard">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<!-- Bootstrap JS Bundle (including Popper for tabs) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Chart.js -->
+<!-- Updated Chart.js to version 4.x -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+
+
+<script>
+  // Overall references
+  const filterForm = document.getElementById("filterForm");
+  const sgChartCanvas = document.getElementById("sgChart");
+  const distanceHistogramCanvas = document.getElementById("distanceHistogram");
+
+  // Overall tab card elements
+  const scoringAvgCard = document.getElementById("scoringAvgCard");
+  const scoringVsParCard = document.getElementById("scoringVsParCard");
+  const totalRoundsCard = document.getElementById("totalRoundsCard");
+  const par3Card = document.getElementById("par3Card");
+  const par4Card = document.getElementById("par4Card");
+  const par5Card = document.getElementById("par5Card");
+
+  // Tee tab elements
+  const teeSGCard = document.getElementById("teeSGCard");
+  const teeDistanceCard = document.getElementById("teeDistanceCard");
+  let teeMissChart;
+
+  // Approach tab elements
+  const approachSGCard = document.getElementById("approachSGCard");
+  const approachGirCard = document.getElementById("approachGirCard");
+  let approachMissChart;
+
+  // Short Game tab elements
+  const upDownPercentCard = document.getElementById("upDownPercentCard");
+  const aroundGreenSGCard = document.getElementById("aroundGreenSGCard");
+
+  // Putting tab elements
+  const puttingSGCard = document.getElementById("puttingSGCard");
+
+  // Chart variables
+  let sgChart;           // Overall SG bar chart
+  let distanceHistogram; // Distance histogram chart
+
+  // Handle filter form submission
+  filterForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    updateDashboard();
+  });
+
+  async function updateDashboard() {
+    const params = new URLSearchParams({
+      course: document.getElementById("course").value,
+      round: document.getElementById("round").value,
+      startDate: document.getElementById("startDate").value,
+      endDate: document.getElementById("endDate").value,
+    });
+
+    // 1) Overall Stats
+    const statsRes = await fetch(`/api/dashboard_stats?${params.toString()}`);
+    const statsData = await statsRes.json();
+    scoringAvgCard.textContent = statsData.scoring_avg;
+    scoringVsParCard.textContent = statsData.scoring_avg_to_par;
+    totalRoundsCard.textContent = statsData.total_rounds;
+    par3Card.textContent = statsData.par3_avg;
+    par4Card.textContent = statsData.par4_avg;
+    par5Card.textContent = statsData.par5_avg;
+
+    // 2) Overall Strokes Gained chart
+    const sgRes = await fetch(`/api/sg_by_shot_type?${params.toString()}`);
+    const sgData = await sgRes.json();
+    if (sgChart) {
+      sgChart.destroy();
+    }
+    const barColors = sgData.values.map(v => v >= 0 ? "rgba(0, 128, 0, 0.6)" : "rgba(255, 0, 0, 0.6)");
+    const borderColors = sgData.values.map(v => v >= 0 ? "rgba(0, 128, 0, 1)" : "rgba(255, 0, 0, 1)");
+
+    sgChart = new Chart(sgChartCanvas, {
+      type: "bar",
+      data: {
+        labels: sgData.labels,
+        datasets: [
+          {
+            label: "Avg Strokes Gained",
+            data: sgData.values,
+            backgroundColor: barColors,
+            borderColor: borderColors,
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      },
+    });
+
+    // 3) Tee Stats
+    const teeRes = await fetch(`/api/tee_stats?${params.toString()}`);
+    const teeData = await teeRes.json();
+    teeSGCard.textContent = teeData.avg_off_tee_sg;
+    teeDistanceCard.textContent = teeData.avg_tee_distance;
+
+    // Build the custom “fairway” visualization (left/center/right)
+    let leftCount = 0, rightCount = 0, centerCount = 0;
+    const directions = teeData.miss_directions;
+    const counts = teeData.miss_counts;
+    let totalShots = 0;
+
+    for (let i = 0; i < directions.length; i++) {
+      const dir = directions[i].toLowerCase();
+      const count = counts[i];
+      totalShots += count;
+
+      if (dir.includes("left")) {
+        leftCount += count;
+      } else if (dir.includes("right")) {
+        rightCount += count;
+      } else {
+        // e.g., "None", "Fairway", "Center"
+        centerCount += count;
+      }
+    }
+
+    if (totalShots > 0) {
+      const leftPct = (leftCount / totalShots) * 100;
+      const rightPct = (rightCount / totalShots) * 100;
+      const centerPct = (centerCount / totalShots) * 100;
+
+      document.getElementById("leftMissSection").style.width = `${leftPct}%`;
+      document.getElementById("leftMissSection").textContent = 
+        leftCount > 0 ? `Left ${leftPct.toFixed(1)}%` : "";
+
+      document.getElementById("centerHitSection").style.width = `${centerPct}%`;
+      document.getElementById("centerHitSection").style.left = `${leftPct}%`;
+      document.getElementById("centerHitSection").textContent = 
+        centerCount > 0 ? `Fairway ${centerPct.toFixed(1)}%` : "";
+
+      document.getElementById("rightMissSection").style.width = `${rightPct}%`;
+      document.getElementById("rightMissSection").style.left = `${leftPct + centerPct}%`;
+      document.getElementById("rightMissSection").textContent = 
+        rightCount > 0 ? `Right ${rightPct.toFixed(1)}%` : "";
+    }
+
+    // 4) Approach Stats
+    const approachRes = await fetch(`/api/approach_stats?${params.toString()}`);
+    const approachData = await approachRes.json();
+    approachSGCard.textContent = approachData.avg_approach_sg;
+    approachGirCard.textContent = approachData.gir_percent + "%";
+
+    // Replace PIE with PolarArea + fixed green circle and clipping
+    if (approachMissChart) {
+      approachMissChart.destroy();
+    }
+    const approachMissCtx = document.getElementById("approachMissChart").getContext("2d");
+
+    // Data for the misses
+    const missDirections = approachData.miss_directions; // ["Long Right","Right","Short Right", etc.]
+    const missCounts = approachData.miss_counts;
+    const totalApproachShots = approachData.total_approach_shots || 0;
+    const girShots = Math.round((approachData.gir_percent / 100) * totalApproachShots);
+
+    approachMissChart = new Chart(approachMissCtx, {
+      type: "polarArea",
+      data: {
+        labels: missDirections,
+        datasets: [{
+          data: missCounts,
+          backgroundColor: [
+            "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0",
+            "#9966FF", "#FF9F40", "#C9CBCF", "#E7E9ED"
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        rotation: (-67.5 * Math.PI / 180), // Rotate to align "Long Right" to 22.5-67.5 degrees
+        scales: {
+          r: {
+            ticks: {
+              display: false // Hide radial ticks
+            },
+            angleLines: {
+              display: false // Hide angle lines
+            },
+            grid: {
+              display: false // Hide grid lines
+            },
+            beginAtZero: true,
+            // Set a fixed maximum value to maintain consistent scaling
+            max: 20 // Adjust this value as needed for your data
+          }
+        },
+        plugins: {
+          legend: {
+            display: false // Disable the legend
+          }
+        },
+        // Custom property to pass GIR data to the plugin
+        girData: {
+          girShots: girShots,
+          girPercent: approachData.gir_percent
+        }
+      },
+      plugins: [
+        {
+          // Custom plugin to handle clipping and drawing the green circle on top
+          id: "fixed-gir-circle",
+          beforeDatasetsDraw(chart, args, options) {
+            const { ctx, scales, options: chartOptions } = chart;
+            const rScale = scales.r;
+            const centerX = rScale.xCenter;
+            const centerY = rScale.yCenter;
+            const fixedRadius = rScale.drawingArea * 0.3; // 30% of drawing area
+
+            // Set clipping path to exclude the inner fixed circle
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, fixedRadius, 0, 2 * Math.PI);
+            ctx.clip();
+
+            // Store the fixedRadius for use in afterDatasetsDraw
+            chart._fixedGirRadius = fixedRadius;
+          },
+          afterDatasetsDraw(chart, args, options) {
+            const { ctx, scales, options: chartOptions } = chart;
+            const rScale = scales.r;
+            const centerX = rScale.xCenter;
+            const centerY = rScale.yCenter;
+            const fixedRadius = chart._fixedGirRadius || (rScale.drawingArea * 0.3);
+
+            // Restore the context to remove the clipping
+            ctx.restore();
+
+            // Now draw the green circle on top
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, fixedRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(0, 255, 0, 0.3)"; // Semi-transparent green
+            ctx.fill();
+            ctx.restore();
+
+            // Optionally, add a label inside the green circle
+            ctx.save();
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillStyle = "#000";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const girShots = chartOptions.girData.girShots;
+            const girPercent = chartOptions.girData.girPercent;
+            ctx.fillText(`GIR: ${girShots} (${girPercent.toFixed(1)}%)`, centerX, centerY);
+            ctx.restore();
+          }
+        }
+      ]
+    });
+
+
+    // 5) Short Game Stats
+    const sgShortRes = await fetch(`/api/short_game_stats?${params.toString()}`);
+    const sgShortData = await sgShortRes.json();
+    upDownPercentCard.textContent = sgShortData.up_down_percent + "%";
+    aroundGreenSGCard.textContent = sgShortData.avg_around_green_sg;
+
+    // 6) Putting Stats
+    const puttingRes = await fetch(`/api/putting_stats?${params.toString()}`);
+    const puttingData = await puttingRes.json();
+    puttingSGCard.textContent = puttingData.avg_putting_sg;
+
+    // 7) Distance Histogram (Overall)
+    const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
+    const histData = await histRes.json(); 
+    // histData = { bin_labels: [...], bin_counts: [...] }
+
+    if (distanceHistogram) {
+      distanceHistogram.destroy();
+    }
+    const distCtx = distanceHistogramCanvas.getContext("2d");
+    distanceHistogram = new Chart(distCtx, {
+      type: "bar",
+      data: {
+        labels: histData.bin_labels,
+        datasets: [{
+          label: "Count of Shots",
+          data: histData.bin_counts,
+          backgroundColor: "rgba(54, 162, 235, 0.6)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Distance From Hole (Yards)"
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: "Count of Shots"
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Load data by default on page load
+  document.addEventListener("DOMContentLoaded", updateDashboard);
+</script>
+
+
+
+
+{% endblock %}
+
+
+
+
+

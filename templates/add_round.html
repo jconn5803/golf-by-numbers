@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Add Round{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Add a New Round</h2>
+    <form method="POST" class="mt-4">
+        <!-- Course Selection -->
+        <div class="mb-3">
+            <label for="course" class="form-label">Select Course</label>
+            <select class="form-select" id="course" name="course" required>
+                <option value="" disabled selected>Choose a course...</option>
+                {% for course in courses %}
+                    <option value="{{ course.courseID }}">{{ course.name }}</option>
+                {% endfor %}
+            </select>
+            <div class="mt-2">
+                <a href="{{ url_for('add_course') }}" class="btn btn-secondary btn-sm">Add Course</a>
+            </div>
+        </div>
+
+        <!-- Tee Selection -->
+        <div class="mb-3">
+            <label for="tee" class="form-label">Select Tee</label>
+            <select class="form-select" id="tee" name="tee" required>
+                <option value="" disabled selected>Choose a tee...</option>
+            </select>
+            <div class="mt-2">
+                <a id="add-tee-button" class="btn btn-secondary btn-sm" style="display:none;">Add Tee</a>
+            </div>
+        </div>
+
+        <!-- Date Selection -->
+        <div class="mb-3">
+            <label for="date_played" class="form-label">Date Played</label>
+            <input type="date" class="form-control" id="date_played" name="date_played" required>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Next</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('course').addEventListener('change', function () {
+        const courseID = this.value;
+
+        // Fetch tees for the selected course
+        fetch(`/get_tees/${courseID}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const teeSelect = document.getElementById('tee');
+                teeSelect.innerHTML = '<option value="" disabled selected>Choose a tee...</option>';
+                data.forEach(tee => {
+                    const option = document.createElement('option');
+                    option.value = tee.teeID;
+                    option.textContent = tee.name;
+                    teeSelect.appendChild(option);
+                });
+
+                // Show the "Add Tee" button
+                const addTeeButton = document.getElementById('add-tee-button');
+                addTeeButton.style.display = 'inline-block';
+                addTeeButton.href = `/add_tee/${courseID}`;
+            })
+            .catch(error => {
+                console.error("Error fetching tees:", error);
+            });
+    });
+</script>
+{% endblock %}
