@@ -506,6 +506,55 @@ def dashboard_stats():
     }
     return jsonify(data)
 
+@app.route('/api/rounds', methods=['GET'])
+@login_required
+def get_rounds():
+    """
+    Fetch rounds for the current user filtered by course, round, and date range.
+    Returns:
+      - roundID
+      - course_name
+      - date_played
+      - score_to_par
+    """
+    # Get query parameters
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    # Build query
+    query = Round.query.join(Course).filter(Round.userID == current_user.userID)
+
+    if course_id:
+        query = query.filter(Round.course_id == course_id)
+    if round_id:
+        query = query.filter(Round.roundID == round_id)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        query = query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        query = query.filter(Round.date_played <= end_date)
+
+    # Order rounds by date_played
+    query = query.order_by(Round.date_played.asc())
+
+    # Execute query and format results
+    rounds = query.all()
+    data = [
+        {
+            "roundID": r.roundID,
+            "course_name": r.course.name,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "score_to_par": r.score_to_par
+        }
+        for r in rounds
+    ]
+
+    return jsonify(data)
+
+
 @app.route('/api/tee_stats', methods=['GET'])
 @login_required
 def tee_stats():

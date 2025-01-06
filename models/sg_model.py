@@ -54,10 +54,10 @@ def shot_type_func(lie, distance, par):
         return "Off the Tee"
     
     # Define the short game category
-    elif distance < 30 and lie != "Green":
+    elif distance < 50 and lie != "Green":
         return "Around the Green"
     
-    # All other shots should be approach by default
+    # All other shots should be approach by default    
     else:
         return "Approach"
     

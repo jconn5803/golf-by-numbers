@@ -163,6 +163,11 @@
     <!-- Distance Histogram -->
     <h5>Shot Distance Histogram</h5>
     <canvas id="distanceHistogram" width="400" height="200"></canvas>
+
+    <!-- Scoring Trend Chart -->
+    <h5>Scoring vs Par Trend</h5>
+    <canvas id="roundPerformanceChart" width="400" height="200"></canvas>
+    
   </div>
 
   <!-- Tee Tab Pane -->
@@ -325,6 +330,7 @@
 <!-- Chart.js -->
 <!-- Updated Chart.js to version 4.x -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 
 
 <script>
@@ -340,6 +346,10 @@
   const par3Card = document.getElementById("par3Card");
   const par4Card = document.getElementById("par4Card");
   const par5Card = document.getElementById("par5Card");
+
+  // Overall tab: Add reference for new chart
+  const roundPerformanceCanvas = document.getElementById("roundPerformanceChart");
+  let roundPerformanceChart; // Declare variable for the chart instance
 
   // Tee tab elements
   const teeSGCard = document.getElementById("teeSGCard");
@@ -367,6 +377,97 @@
     e.preventDefault();
     updateDashboard();
   });
+
+  // Function to update the line chart for score_to_par
+  async function updateRoundPerformanceChart(params) {
+    const roundRes = await fetch(`/api/rounds?${params.toString()}`);
+    const roundData = await roundRes.json();
+
+    // Prepare data for the chart
+    const labels = roundData.map(r => `Round ${r.roundID}`);
+    const scores = roundData.map(r => r.score_to_par);
+    const tooltips = roundData.map(r => ({
+      course: r.course_name,
+      date: r.date_played,
+      score: r.score_to_par
+    }));
+
+    if (roundPerformanceChart) {
+      roundPerformanceChart.destroy();
+    }
+
+    roundPerformanceChart = new Chart(roundPerformanceCanvas, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Score to Par",
+          data: scores,
+          borderColor: "rgba(75, 192, 192, 1)",
+          backgroundColor: "rgba(75, 192, 192, 0.2)",
+          borderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: "rgba(75, 192, 192, 1)"
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              title: (context) => {
+                const index = context[0].dataIndex;
+                return `Course: ${tooltips[index].course}`;
+              },
+              label: (context) => {
+                const index = context.dataIndex;
+                return [
+                  `Date Played: ${tooltips[index].date}`,
+                  `Score: ${tooltips[index].score}`
+                ];
+              }
+            }
+          },
+           // Add the annotation plugin configuration here
+          annotation: {
+            annotations: {
+              zeroLine: {
+                type: 'line',
+                yMin: 0,
+                yMax: 0,
+                borderColor: 'red',
+                borderDash: [5, 5], // Makes the line dashed
+                borderWidth: 2,
+                }
+              }
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Rounds Played"
+            },
+            ticks:{
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: "Score to Par"
+            },
+            ticks:{
+              display: true
+            }
+          }
+        }
+      }
+    });
+  }
+
 
   async function updateDashboard() {
     const params = new URLSearchParams({
@@ -416,6 +517,9 @@
         }
       },
     });
+
+    // Scoring Trend
+    updateRoundPerformanceChart(params);
 
     // 3) Tee Stats
     const teeRes = await fetch(`/api/tee_stats?${params.toString()}`);

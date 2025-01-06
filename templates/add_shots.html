@@ -97,98 +97,101 @@
 
 <script>
     function addShot(holeNumber, par) {
-        const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
+    const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
 
-        // Preserve existing form data
-        const form = document.getElementById('add-shots-form');
-        const formData = new FormData(form);
+    // Preserve existing form data
+    const form = document.getElementById('add-shots-form');
+    const formData = new FormData(form);
 
-        // Count existing shots for the hole by looking for distance fields
-        const existingShots = shotsContainer.querySelectorAll(
-            `[id^="hole_${holeNumber}_shot_"][id$="_distance"]`
-        );
-        
-        const newShotNum = existingShots.length + 1;
+    // Count existing shots for the hole by looking for distance fields
+    const existingShots = shotsContainer.querySelectorAll(
+        `[id^="hole_${holeNumber}_shot_"][id$="_distance"]`
+    );
 
-        // Get the current lie from the last shot
-        let preselectedLie = 'Fairway'; // Default value
-        if (existingShots.length > 0) {
-            const lastShotLie = document.getElementById(`hole_${holeNumber}_shot_${existingShots.length}_lie`);
-            if (lastShotLie) {
-                preselectedLie = lastShotLie.value; // Set the lie to the previous shot's value
-            }
+    const newShotNum = existingShots.length + 1;
+
+    // Get the current lie from the last shot
+    let preselectedLie = 'Fairway'; // Default value
+    if (existingShots.length > 0) {
+        const lastShotLie = document.getElementById(`hole_${holeNumber}_shot_${existingShots.length}_lie`);
+        if (lastShotLie) {
+            preselectedLie = lastShotLie.value; // Set the lie to the previous shot's value
         }
+    }
 
-        // Add new fields for the shot
-        const newShotHTML = `
-            <div class="shot-card" id="hole_${holeNumber}_shot_${newShotNum}">
-                <div class="mb-3">
-                    <label for="hole_${holeNumber}_shot_${newShotNum}_distance" class="form-label">Distance (yards):</label>
-                    <input 
-                        type="number" 
-                        class="form-control" 
-                        name="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                        id="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                        required
-                    >
-                </div>
-                <div class="mb-3">
-                    <label for="hole_${holeNumber}_shot_${newShotNum}_lie" class="form-label">Lie:</label>
-                    <select 
-                        class="form-select" 
-                        name="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                        id="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                        required 
-                        onchange="updateMissDirection(${holeNumber}, ${newShotNum}, ${par})"
-                    >
-                        <option value="Fairway" ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
-                        <option value="Rough" ${preselectedLie === 'Rough' ? 'selected' : ''}>Rough</option>
-                        <option value="Bunker" ${preselectedLie === 'Bunker' ? 'selected' : ''}>Bunker</option>
-                        <option value="Recovery" ${preselectedLie === 'Recovery' ? 'selected' : ''}>Recovery</option>
-                        <option value="Green" ${preselectedLie === 'Green' ? 'selected' : ''}>Green</option>
-                    </select>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input" 
-                        name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
-                        id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
-                        value="1"
-                        onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB')"
-                    >
-                    <label for="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" class="form-check-label">Out of Bounds</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input" 
-                        name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
-                        id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
-                        value="1"
-                        onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard')"
-                    >
-                    <label for="hole_${holeNumber}_shot_${newShotNum}_hazard" class="form-check-label">Hazard/Unplayable</label>
-                </div>
-                <button 
-                    type="button" 
-                    class="btn btn-danger btn-sm" 
-                    onclick="removeShot(${holeNumber}, ${newShotNum})"
+    // Add new fields for the shot
+    const newShotHTML = `
+        <div class="shot-card" id="hole_${holeNumber}_shot_${newShotNum}">
+            <div class="mb-3">
+                <label for="hole_${holeNumber}_shot_${newShotNum}_distance" class="form-label">Distance (yards):</label>
+                <input 
+                    type="number" 
+                    class="form-control" 
+                    name="hole_${holeNumber}_shot_${newShotNum}_distance" 
+                    id="hole_${holeNumber}_shot_${newShotNum}_distance" 
+                    required
                 >
-                    Remove Shot
-                </button>
             </div>
-        `;
+            <div class="mb-3">
+                <label for="hole_${holeNumber}_shot_${newShotNum}_lie" class="form-label">Lie:</label>
+                <select 
+                    class="form-select" 
+                    name="hole_${holeNumber}_shot_${newShotNum}_lie" 
+                    id="hole_${holeNumber}_shot_${newShotNum}_lie" 
+                    required 
+                    onchange="updateMissDirection(${holeNumber}, ${newShotNum}, ${par})"
+                >
+                    <option value="Fairway" ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
+                    <option value="Rough" ${preselectedLie === 'Rough' ? 'selected' : ''}>Rough</option>
+                    <option value="Bunker" ${preselectedLie === 'Bunker' ? 'selected' : ''}>Bunker</option>
+                    <option value="Recovery" ${preselectedLie === 'Recovery' ? 'selected' : ''}>Recovery</option>
+                    <option value="Green" ${preselectedLie === 'Green' ? 'selected' : ''}>Green</option>
+                </select>
+            </div>
+            <div class="form-check form-check-inline">
+                <input 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
+                    id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
+                    value="1"
+                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB')"
+                >
+                <label for="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" class="form-check-label">Out of Bounds</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
+                    id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
+                    value="1"
+                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard')"
+                >
+                <label for="hole_${holeNumber}_shot_${newShotNum}_hazard" class="form-check-label">Hazard/Unplayable</label>
+            </div>
+            <button 
+                type="button" 
+                class="btn btn-danger btn-sm" 
+                onclick="removeShot(${holeNumber}, ${newShotNum})"
+            >
+                Remove Shot
+            </button>
+        </div>
+    `;
 
-        shotsContainer.insertAdjacentHTML('beforeend', newShotHTML);
+    shotsContainer.insertAdjacentHTML('beforeend', newShotHTML);
 
-        // Restore form data to ensure no inputs are lost
-        for (const [key, value] of formData.entries()) {
-            const input = document.querySelector(`[name="${key}"]`);
-            if (input) {
-                input.value = value;
-            }
+    // Restore form data to ensure no inputs are lost
+    for (const [key, value] of formData.entries()) {
+        const input = document.querySelector(`[name="${key}"]`);
+        if (input) {
+            input.value = value;
         }
+    }
+
+    // Trigger updateMissDirection for the new shot if the preselected lie requires it
+    updateMissDirection(holeNumber, newShotNum, par);
 }
 
 
@@ -275,76 +278,23 @@
         } 
         // Otherwise, if the new lie is NOT Green, we assume it's an approach shot or tee shot on par 3 
         // that missed the green, so we show the compass.
-        else if (lieElement.value !== "Green") {
+        else if (lieElement.value !== "Green" && previousLieElement.value !== "Tee") {
             const compassSelector = `
                 <div class="mb-3" id="hole_${holeNumber}_shot_${shotNumber - 1}_miss_direction">
                     <label class="form-label">Miss Direction:</label>
                     <div class="compass-container">
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Long Left" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Long Left')"
-                        >
-                            NW
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Long" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Long')"
-                        >
-                            N
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Long Right" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Long Right')"
-                        >
-                            NE
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Left" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Left')"
-                        >
-                            W
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Right" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Right')"
-                        >
-                            E
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Short Left" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Short Left')"
-                        >
-                            SW
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Short" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Short')"
-                        >
-                            S
-                        </button>
-                        <button 
-                            type="button" 
-                            class="compass-btn" 
-                            data-value="Short Right" 
-                            onclick="selectMissDirection(${holeNumber}, ${shotNumber - 1}, 'Short Right')"
-                        >
-                            SE
-                        </button>
+                    <div class="compass-buttons">
+                        <button class="compass-btn">Long</button>
+                        <button class="compass-btn">Long Right</button>
+                        <button class="compass-btn">Right</button>
+                        <button class="compass-btn">Short Right</button>
+                        <button class="compass-btn">Short</button>
+                        <button class="compass-btn">Short Left</button>
+                        <button class="compass-btn">Left</button>
+                        <button class="compass-btn">Long Left</button>
                     </div>
+                </div>
+
                     <input 
                         type="hidden" 
                         name="hole_${holeNumber}_shot_${shotNumber - 1}_miss_direction" 
@@ -539,26 +489,101 @@
         background-color: #fafafa; /* You can pick any light background color */
     }
 
-    .compass-container {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-gap: 5px;
-        width: 120px;
-        margin-top: 5px;
-    }
+/* Wrapper for the compass */
+.compass-container-wrapper {
+    display: flex; /* Center the compass within the page */
+    justify-content: center;
+    align-items: center;
+    margin: 50px auto; /* Adds spacing around the compass */
+}
 
-    .compass-btn {
-        width: 35px;
-        height: 35px;
-        font-size: 12px;
-        border: 1px solid #ced4da;
-        background-color: #fff;
-        cursor: pointer;
-    }
+/* Outer compass container */
+.compass-container {
+    position: relative; /* Allows proper layout of child elements */
+    width: 250px; /* Set size of the entire compass */
+    height: 250px;
+    background-color: #f8f9fa; /* Light background color for the compass */
+    display: flex; /* Center the inner elements */
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #ccc; /* Optional border for the compass */
+}
 
-    .compass-btn:hover {
-        background-color: #f0f0f0;
-    }
+
+/* Compass buttons container */
+.compass-buttons {
+    position: relative; /* Ensures child buttons align within the grid */
+    display: grid; /* Enables grid layout for positioning buttons */
+    width: 100%; /* Match the size of the compass container */
+    height: 100%;
+    grid-template-columns: repeat(3, 1fr); /* Creates a 3x3 grid */
+    grid-template-rows: repeat(3, 1fr);
+    justify-items: center; /* Centers buttons horizontally in their cells */
+    align-items: center; /* Centers buttons vertically in their cells */
+}
+
+/* Individual compass buttons */
+.compass-btn {
+    width: 70px; /* Diameter of the buttons */
+    height: 70px;
+    background-color: #e9ecef; /* Default button background color */
+    border-radius: 50%; /* Makes buttons circular */
+    border: 1px solid #ccc; /* Optional border for buttons */
+    display: flex; /* Centers text inside the button */
+    justify-content: center;
+    align-items: center;
+    cursor: pointer; /* Changes cursor to pointer for better UX */
+}
+
+.compass-btn:hover {
+    background-color: #dee2e6; /* Button hover effect */
+}
+
+/* Positioning buttons in the grid */
+.compass-buttons > .compass-btn:nth-child(1) { 
+    grid-column: 2; /* Center-top */
+    grid-row: 1; 
+} 
+
+.compass-buttons > .compass-btn:nth-child(2) { 
+    grid-column: 3; /* Top-right */
+    grid-row: 1; 
+}
+
+.compass-buttons > .compass-btn:nth-child(3) { 
+    grid-column: 3; /* Center-right */
+    grid-row: 2; 
+}
+
+.compass-buttons > .compass-btn:nth-child(4) { 
+    grid-column: 3; /* Bottom-right */
+    grid-row: 3; 
+}
+
+.compass-buttons > .compass-btn:nth-child(5) { 
+    grid-column: 2; /* Center-bottom */
+    grid-row: 3; 
+}
+
+.compass-buttons > .compass-btn:nth-child(6) { 
+    grid-column: 1; /* Bottom-left */
+    grid-row: 3; 
+}
+
+.compass-buttons > .compass-btn:nth-child(7) { 
+    grid-column: 1; /* Center-left */
+    grid-row: 2; 
+}
+
+.compass-buttons > .compass-btn:nth-child(8) { 
+    grid-column: 1; /* Top-left */
+    grid-row: 1; 
+}
+
+
+    
+
+    
 </style>
 {% endblock %}
 
