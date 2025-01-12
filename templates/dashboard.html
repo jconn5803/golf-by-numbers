@@ -97,7 +97,6 @@
   <!-- Overall Tab Pane -->
   <div class="tab-pane fade show active p-3" id="overallTabPane" role="tabpanel" aria-labelledby="overall-tab">
     <h4>Overall</h4>
-
     <!-- Example Cards -->
     <div class="row mb-3">
       <!-- Scoring Average card -->
@@ -192,6 +191,15 @@
           </div>
         </div>
       </div>
+      <!-- Card 3: In Play % -->
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="card text-center shadow">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">In Play %</h6>
+            <h3 class="card-title" id="teeLieCard">--</h3>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Miss Direction Fairway Visualization -->
@@ -200,13 +208,12 @@
         width: 100%;
         max-width: 500px; 
         height: 60px; 
-        background-color: #567d46; /* A greenish color for the fairway */
+        background-color: #567d46;
         position: relative; 
-        border-radius: 30px;      /* Rounded ends to mimic a fairway shape */
+        border-radius: 30px;
         margin-bottom: 1em;
         overflow: hidden;
     ">
-      <!-- Left Miss section -->
       <div id="leftMissSection" style="
           position: absolute; 
           left: 0; 
@@ -217,11 +224,7 @@
           line-height: 60px; 
           color: #fff; 
           font-weight: bold;
-      ">
-        <!-- Will fill in left % via JS -->
-      </div>
-
-      <!-- Center (Fairway) section -->
+      "></div>
       <div id="centerHitSection" style="
           position: absolute; 
           top: 0; 
@@ -231,11 +234,7 @@
           line-height: 60px; 
           color: #fff; 
           font-weight: bold;
-      ">
-        <!-- Will fill in center % via JS -->
-      </div>
-
-      <!-- Right Miss section -->
+      "></div>
       <div id="rightMissSection" style="
           position: absolute; 
           top: 0; 
@@ -245,9 +244,7 @@
           line-height: 60px; 
           color: #fff; 
           font-weight: bold;
-      ">
-        <!-- Will fill in right % via JS -->
-      </div>
+      "></div>
     </div>
   </div>
 
@@ -276,15 +273,30 @@
       </div>
     </div>
 
-    <!-- Custom Approach Miss Directions Chart -->
+    <!-- D3.js Approach Miss Directions Visualization -->
     <h5>Approach Miss Directions</h5>
-    <canvas id="approachMissChart" width="400" height="400" style="transform: rotate(22.5deg);"></canvas>
+    <div id="approachMissChart" style="width:400px; height:400px;"></div>
+
+    <!-- Approach Shots Table -->
+    <h5 class="mt-4">Approach Shots by Distance</h5>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Distance Range</th>
+          <th>SG per Shot</th>
+          <th>Proximity to Hole</th>
+          <th>Green Hit %</th>
+        </tr>
+      </thead>
+      <tbody id="approachTableBody">
+        <!-- Will be populated by JavaScript -->
+      </tbody>
+    </table>
   </div>
 
   <!-- Short Game Tab Pane -->
   <div class="tab-pane fade p-3" id="shortGameTabPane" role="tabpanel" aria-labelledby="shortgame-tab">
     <h4>Short Game Stats</h4>
-
     <div class="row mb-3">
       <!-- Card: Up & Down Percentage -->
       <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
@@ -305,6 +317,34 @@
         </div>
       </div>
     </div>
+    <!-- Bunker Shots Table-->
+    <h5>Bunker Shots</h5>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Distance</th>
+          <th>Avg Proximity</th>
+          <th>Up & Down %</th>
+        </tr>
+      </thead>
+      <tbody id="bunkerTableBody">
+        <!-- Populated by JavaScript -->
+      </tbody>
+    </table>
+    <!-- Non-Bunker Shots Table-->
+    <h5>Non-Bunker Shots</h5>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Distance</th>
+          <th>Avg Proximity</th>
+          <th>Up & Down %</th>
+        </tr>
+      </thead>
+      <tbody id="nonBunkerTableBody">
+        <!-- Populated by JavaScript -->
+      </tbody>
+    </table>
   </div>
 
   <!-- Putting Tab Pane -->
@@ -320,18 +360,31 @@
         </div>
       </div>
     </div>
+    <!-- Putting Stats Table -->
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Distance Range</th>
+          <th>Make Rate (%)</th>
+          <th>3-Putt Avoid (%)</th>
+          <th>Avg Next Putt Distance</th>
+        </tr>
+      </thead>
+      <tbody id="puttingTableBody">
+        <!-- Populated by JavaScript -->
+      </tbody>
+    </table>
   </div>
 </div>
 
 <!-- SCRIPTS -->
 <!-- Bootstrap JS Bundle (including Popper for tabs) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Chart.js -->
-<!-- Updated Chart.js to version 4.x -->
+<!-- Chart.js (used in other tabs) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
-
+<!-- D3.js for the Approach visualization -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
 
 <script>
   // Overall references
@@ -347,9 +400,9 @@
   const par4Card = document.getElementById("par4Card");
   const par5Card = document.getElementById("par5Card");
 
-  // Overall tab: Add reference for new chart
+  // Overall tab: Reference for the line chart
   const roundPerformanceCanvas = document.getElementById("roundPerformanceChart");
-  let roundPerformanceChart; // Declare variable for the chart instance
+  let roundPerformanceChart;
 
   // Tee tab elements
   const teeSGCard = document.getElementById("teeSGCard");
@@ -359,7 +412,7 @@
   // Approach tab elements
   const approachSGCard = document.getElementById("approachSGCard");
   const approachGirCard = document.getElementById("approachGirCard");
-  let approachMissChart;
+  // (We use D3 for the miss directions)
 
   // Short Game tab elements
   const upDownPercentCard = document.getElementById("upDownPercentCard");
@@ -368,22 +421,19 @@
   // Putting tab elements
   const puttingSGCard = document.getElementById("puttingSGCard");
 
-  // Chart variables
-  let sgChart;           // Overall SG bar chart
-  let distanceHistogram; // Distance histogram chart
+  // Chart.js variables for other charts
+  let sgChart;           
+  let distanceHistogram; 
 
-  // Handle filter form submission
   filterForm.addEventListener("submit", function(e) {
     e.preventDefault();
     updateDashboard();
   });
 
-  // Function to update the line chart for score_to_par
   async function updateRoundPerformanceChart(params) {
     const roundRes = await fetch(`/api/rounds?${params.toString()}`);
     const roundData = await roundRes.json();
 
-    // Prepare data for the chart
     const labels = roundData.map(r => `Round ${r.roundID}`);
     const scores = roundData.map(r => r.score_to_par);
     const tooltips = roundData.map(r => ({
@@ -429,7 +479,6 @@
               }
             }
           },
-           // Add the annotation plugin configuration here
           annotation: {
             annotations: {
               zeroLine: {
@@ -437,11 +486,11 @@
                 yMin: 0,
                 yMax: 0,
                 borderColor: 'red',
-                borderDash: [5, 5], // Makes the line dashed
+                borderDash: [5, 5],
                 borderWidth: 2,
-                }
               }
-          },
+            }
+          }
         },
         scales: {
           x: {
@@ -449,25 +498,50 @@
               display: true,
               text: "Rounds Played"
             },
-            ticks:{
-              display: false
-            }
+            ticks: { display: false }
           },
           y: {
             beginAtZero: true,
-            title: {
-              display: true,
-              text: "Score to Par"
-            },
-            ticks:{
-              display: true
-            }
+            title: { display: true, text: "Score to Par" }
           }
         }
       }
     });
   }
 
+  async function updateApproachTable(params) {
+    try {
+      // Fetch approach table data from the API endpoint.
+      const response = await fetch(`/api/approach_table?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch Approach Table data");
+
+      const data = await response.json(); // Expected format: { approachData: [{distanceRange, sgPerShot, avgProximity, greenHitPct}, ...] }
+      const tableBody = document.getElementById("approachTableBody");
+      if (!tableBody) {
+        console.error("No table body with id 'approachTableBody' found.");
+        return;
+      }
+
+      // Clear existing rows.
+      tableBody.innerHTML = "";
+      
+      // Populate rows.
+      if (data.approachData && Array.isArray(data.approachData)) {
+        data.approachData.forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.distanceRange}</td>
+            <td>${row.sgPerShot}</td>
+            <td>${row.avgProximity}</td>
+            <td>${row.greenHitPct}%</td>
+          `;
+          tableBody.appendChild(tr);
+        });
+      }
+    } catch (err) {
+      console.error("Error updating approach table:", err);
+    }
+  }
 
   async function updateDashboard() {
     const params = new URLSearchParams({
@@ -487,7 +561,7 @@
     par4Card.textContent = statsData.par4_avg;
     par5Card.textContent = statsData.par5_avg;
 
-    // 2) Overall Strokes Gained chart
+    // 2) Overall Strokes Gained Chart
     const sgRes = await fetch(`/api/sg_by_shot_type?${params.toString()}`);
     const sgData = await sgRes.json();
     if (sgChart) {
@@ -500,25 +574,17 @@
       type: "bar",
       data: {
         labels: sgData.labels,
-        datasets: [
-          {
-            label: "Avg Strokes Gained",
-            data: sgData.values,
-            backgroundColor: barColors,
-            borderColor: borderColors,
-            borderWidth: 1,
-          },
-        ],
+        datasets: [{
+          label: "Avg Strokes Gained",
+          data: sgData.values,
+          backgroundColor: barColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+        }],
       },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
     });
 
-    // Scoring Trend
     updateRoundPerformanceChart(params);
 
     // 3) Tee Stats
@@ -526,178 +592,195 @@
     const teeData = await teeRes.json();
     teeSGCard.textContent = teeData.avg_off_tee_sg;
     teeDistanceCard.textContent = teeData.avg_tee_distance;
+    document.getElementById("teeLieCard").textContent = teeData.cumulativeLiePct + "%";
 
-    // Build the custom “fairway” visualization (left/center/right)
     let leftCount = 0, rightCount = 0, centerCount = 0;
     const directions = teeData.miss_directions;
     const counts = teeData.miss_counts;
     let totalShots = 0;
-
     for (let i = 0; i < directions.length; i++) {
       const dir = directions[i].toLowerCase();
       const count = counts[i];
       totalShots += count;
-
       if (dir.includes("left")) {
         leftCount += count;
       } else if (dir.includes("right")) {
         rightCount += count;
       } else {
-        // e.g., "None", "Fairway", "Center"
         centerCount += count;
       }
     }
-
     if (totalShots > 0) {
       const leftPct = (leftCount / totalShots) * 100;
       const rightPct = (rightCount / totalShots) * 100;
       const centerPct = (centerCount / totalShots) * 100;
-
       document.getElementById("leftMissSection").style.width = `${leftPct}%`;
-      document.getElementById("leftMissSection").textContent = 
-        leftCount > 0 ? `Left ${leftPct.toFixed(1)}%` : "";
-
+      document.getElementById("leftMissSection").textContent = leftCount > 0 ? `Left ${leftPct.toFixed(1)}%` : "";
       document.getElementById("centerHitSection").style.width = `${centerPct}%`;
       document.getElementById("centerHitSection").style.left = `${leftPct}%`;
-      document.getElementById("centerHitSection").textContent = 
-        centerCount > 0 ? `Fairway ${centerPct.toFixed(1)}%` : "";
-
+      document.getElementById("centerHitSection").textContent = centerCount > 0 ? `Fairway ${centerPct.toFixed(1)}%` : "";
       document.getElementById("rightMissSection").style.width = `${rightPct}%`;
       document.getElementById("rightMissSection").style.left = `${leftPct + centerPct}%`;
-      document.getElementById("rightMissSection").textContent = 
-        rightCount > 0 ? `Right ${rightPct.toFixed(1)}%` : "";
+      document.getElementById("rightMissSection").textContent = rightCount > 0 ? `Right ${rightPct.toFixed(1)}%` : "";
     }
 
-    // 4) Approach Stats
+    // 4) Approach Stats (Using D3.js for the miss visualization)
     const approachRes = await fetch(`/api/approach_stats?${params.toString()}`);
     const approachData = await approachRes.json();
     approachSGCard.textContent = approachData.avg_approach_sg;
     approachGirCard.textContent = approachData.gir_percent + "%";
 
-    // Replace PIE with PolarArea + fixed green circle and clipping
-    if (approachMissChart) {
-      approachMissChart.destroy();
-    }
-    const approachMissCtx = document.getElementById("approachMissChart").getContext("2d");
+    // Prepare D3 data for miss directions.
+    const missData = approachData.miss_directions.map((dir, i) => ({
+      direction: dir,
+      frequency: approachData.miss_counts[i]
+    }));
 
-    // Data for the misses
-    const missDirections = approachData.miss_directions; // ["Long Right","Right","Short Right", etc.]
-    const missCounts = approachData.miss_counts;
-    const totalApproachShots = approachData.total_approach_shots || 0;
-    const girShots = Math.round((approachData.gir_percent / 100) * totalApproachShots);
+    // For the purposes of the D3 visualization, 
+    // we calculate "greens_hit" from the Shot-based method.
+    // (Note: You may adjust this if needed.)
+    const totalApproachShotsForD3 = approachData.total_approach_shots || 0;
+    // Here using greens_hit field from the API which is the shot-based value.
+    const girShots = Math.round((approachData.greens_hit / 100) * totalApproachShotsForD3);
 
-    approachMissChart = new Chart(approachMissCtx, {
-      type: "polarArea",
-      data: {
-        labels: missDirections,
-        datasets: [{
-          data: missCounts,
-          backgroundColor: [
-            "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0",
-            "#9966FF", "#FF9F40", "#C9CBCF", "#E7E9ED"
-          ]
-        }]
-      },
-      options: {
-        responsive: true,
-        rotation: (-67.5 * Math.PI / 180), // Rotate to align "Long Right" to 22.5-67.5 degrees
-        scales: {
-          r: {
-            ticks: {
-              display: false // Hide radial ticks
-            },
-            angleLines: {
-              display: false // Hide angle lines
-            },
-            grid: {
-              display: false // Hide grid lines
-            },
-            beginAtZero: true,
-            // Set a fixed maximum value to maintain consistent scaling
-            max: 20 // Adjust this value as needed for your data
-          }
-        },
-        plugins: {
-          legend: {
-            display: false // Disable the legend
-          }
-        },
-        // Custom property to pass GIR data to the plugin
-        girData: {
-          girShots: girShots,
-          girPercent: approachData.gir_percent
-        }
-      },
-      plugins: [
-        {
-          // Custom plugin to handle clipping and drawing the green circle on top
-          id: "fixed-gir-circle",
-          beforeDatasetsDraw(chart, args, options) {
-            const { ctx, scales, options: chartOptions } = chart;
-            const rScale = scales.r;
-            const centerX = rScale.xCenter;
-            const centerY = rScale.yCenter;
-            const fixedRadius = rScale.drawingArea * 0.3; // 30% of drawing area
+    // Remove any existing SVG from the container.
+    d3.select("#approachMissChart").selectAll("*").remove();
 
-            // Set clipping path to exclude the inner fixed circle
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, fixedRadius, 0, 2 * Math.PI);
-            ctx.clip();
+    const width = 400,
+          height = 400,
+          margin = 20,
+          radius = Math.min(width, height) / 2 - margin;
 
-            // Store the fixedRadius for use in afterDatasetsDraw
-            chart._fixedGirRadius = fixedRadius;
-          },
-          afterDatasetsDraw(chart, args, options) {
-            const { ctx, scales, options: chartOptions } = chart;
-            const rScale = scales.r;
-            const centerX = rScale.xCenter;
-            const centerY = rScale.yCenter;
-            const fixedRadius = chart._fixedGirRadius || (rScale.drawingArea * 0.3);
+    const svg = d3.select("#approachMissChart")
+                  .append("svg")
+                  .attr("width", width)
+                  .attr("height", height)
+                  .append("g")
+                  .attr("transform", `translate(${width/2},${height/2})`);
 
-            // Restore the context to remove the clipping
-            ctx.restore();
+    // Create a tooltip div.
+    const tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "d3-tooltip")
+      .style("position", "absolute")
+      .style("padding", "4px 8px")
+      .style("font", "12px sans-serif")
+      .style("background", "lightsteelblue")
+      .style("border-radius", "4px")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
 
-            // Now draw the green circle on top
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, fixedRadius, 0, 2 * Math.PI);
-            ctx.fillStyle = "rgba(0, 255, 0, 0.3)"; // Semi-transparent green
-            ctx.fill();
-            ctx.restore();
+    // For constant-angle slices.
+    const numSlices = missData.length;
+    const angleDelta = 2 * Math.PI / numSlices;
+    const maxFreq = d3.max(missData, d => d.frequency);
+    const rScale = d3.scaleLinear()
+                     .domain([0, maxFreq])
+                     .range([radius * 0.3, radius]);
 
-            // Optionally, add a label inside the green circle
-            ctx.save();
-            ctx.font = "bold 14px sans-serif";
-            ctx.fillStyle = "#000";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            const girShots = chartOptions.girData.girShots;
-            const girPercent = chartOptions.girData.girPercent;
-            ctx.fillText(`GIR: ${girShots} (${girPercent.toFixed(1)}%)`, centerX, centerY);
-            ctx.restore();
-          }
-        }
-      ]
-    });
+    const dataWithAngles = missData.map((d, i) => ({
+      direction: d.direction,
+      frequency: d.frequency,
+      startAngle: i * angleDelta + (22.5 * Math.PI / 180),
+      endAngle: (i + 1) * angleDelta + (22.5 * Math.PI / 180)
+    }));
 
+    const arc = d3.arc()
+                  .innerRadius(radius * 0.3)
+                  .outerRadius(d => rScale(d.frequency))
+                  .startAngle(d => d.startAngle)
+                  .endAngle(d => d.endAngle);
 
-    // 5) Short Game Stats
+    const color = d3.scaleOrdinal(d3.schemeSet2);
+
+    svg.selectAll("path")
+       .data(dataWithAngles)
+       .enter()
+       .append("path")
+       .attr("d", arc)
+       .attr("fill", (d, i) => color(i))
+       .attr("stroke", "white")
+       .style("stroke-width", "2px")
+       .on("mouseover", function(event, d) {
+          tooltip.transition().duration(200).style("opacity", 0.9);
+          tooltip.html(`<strong>${d.direction}</strong>: ${d.frequency}`)
+                 .style("left", (event.pageX + 10) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+       })
+       .on("mousemove", function(event, d) {
+          tooltip.style("left", (event.pageX + 10) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+       })
+       .on("mouseout", function(event, d) {
+          tooltip.transition().duration(500).style("opacity", 0);
+       });
+
+    const centerRadius = radius * 0.3;
+    svg.append("circle")
+       .attr("cx", 0)
+       .attr("cy", 0)
+       .attr("r", centerRadius)
+       .attr("fill", "green")
+       .attr("opacity", 0.8);
+
+    svg.append("text")
+       .attr("text-anchor", "middle")
+       .attr("dy", "0.35em")
+       .style("font-size", "14px")
+       .style("fill", "white")
+       .text(`Green: ${approachData.greens_hit.toFixed(1)}%`);
+
+    // 5) Update Approach Shots Table
+    await updateApproachTable(params);
+
+    // 6) Short Game Stats
     const sgShortRes = await fetch(`/api/short_game_stats?${params.toString()}`);
     const sgShortData = await sgShortRes.json();
     upDownPercentCard.textContent = sgShortData.up_down_percent + "%";
     aroundGreenSGCard.textContent = sgShortData.avg_around_green_sg;
+    const bunkerContainer = document.getElementById("bunkerTableBody");
+    bunkerContainer.innerHTML = "";
+    sgShortData.bunkerData.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${row.distanceRange}</td>
+        <td>${row.avgProximity}</td>
+        <td>${row.upDownPercent}%</td>
+      `;
+      bunkerContainer.appendChild(tr);
+    });
+    const nonBunkerContainer = document.getElementById("nonBunkerTableBody");
+    nonBunkerContainer.innerHTML = "";
+    sgShortData.nonBunkerData.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${row.distanceRange}</td>
+        <td>${row.avgProximity}</td>
+        <td>${row.upDownPercent}%</td>
+      `;
+      nonBunkerContainer.appendChild(tr);
+    });
 
-    // 6) Putting Stats
+    // 7) Putting Stats
     const puttingRes = await fetch(`/api/putting_stats?${params.toString()}`);
     const puttingData = await puttingRes.json();
     puttingSGCard.textContent = puttingData.avg_putting_sg;
+    const puttingTableBody = document.getElementById("puttingTableBody");
+    puttingTableBody.innerHTML = "";
+    puttingData.puttingData.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${row.distanceRange}</td>
+        <td>${row.makeRate}%</td>
+        <td>${row.threePuttAvoid}%</td>
+        <td>${row.avgNextPuttDist}</td>
+      `;
+      puttingTableBody.appendChild(tr);
+    });
 
-    // 7) Distance Histogram (Overall)
+    // 8) Distance Histogram (Overall)
     const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
-    const histData = await histRes.json(); 
-    // histData = { bin_labels: [...], bin_counts: [...] }
-
+    const histData = await histRes.json();
     if (distanceHistogram) {
       distanceHistogram.destroy();
     }
@@ -735,16 +818,97 @@
     });
   }
 
-  // Load data by default on page load
+  async function updateApproachTable(params) {
+    try {
+      const response = await fetch(`/api/approach_table?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch Approach Table data");
+
+      const data = await response.json(); // Expected { approachData: [ { distanceRange, sgPerShot, avgProximity, greenHitPct }, ... ] }
+      const tableBody = document.getElementById("approachTableBody");
+      if (!tableBody) {
+        console.error("No table body with id 'approachTableBody' found.");
+        return;
+      }
+      tableBody.innerHTML = "";
+      if (data.approachData && Array.isArray(data.approachData)) {
+        data.approachData.forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.distanceRange}</td>
+            <td>${row.sgPerShot}</td>
+            <td>${row.avgProximity}</td>
+            <td>${row.greenHitPct}%</td>
+          `;
+          tableBody.appendChild(tr);
+        });
+      }
+    } catch (err) {
+      console.error("Error updating approach table:", err);
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", updateDashboard);
 </script>
 
+<style>
+  .shot-card {
+    border: 1px solid #dee2e6;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #fafafa;
+  }
 
+  /* Compass styles */
+  .compass-container {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #ccc;
+  }
+  .compass-buttons {
+    position: relative;
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    justify-items: center;
+    align-items: center;
+  }
+  .compass-btn {
+    width: 70px;
+    height: 70px;
+    background-color: #e9ecef;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  .compass-btn:hover {
+    background-color: #dee2e6;
+  }
+  /* Positions for compass buttons in a 3x3 grid */
+  .compass-buttons > .compass-btn:nth-child(1) { grid-column: 2; grid-row: 1; }
+  .compass-buttons > .compass-btn:nth-child(2) { grid-column: 3; grid-row: 1; }
+  .compass-buttons > .compass-btn:nth-child(3) { grid-column: 3; grid-row: 2; }
+  .compass-buttons > .compass-btn:nth-child(4) { grid-column: 3; grid-row: 3; }
+  .compass-buttons > .compass-btn:nth-child(5) { grid-column: 2; grid-row: 3; }
+  .compass-buttons > .compass-btn:nth-child(6) { grid-column: 1; grid-row: 3; }
+  .compass-buttons > .compass-btn:nth-child(7) { grid-column: 1; grid-row: 2; }
+  .compass-buttons > .compass-btn:nth-child(8) { grid-column: 1; grid-row: 1; }
 
-
+  /* Style for selected compass button */
+  .compass-btn.selected {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+    border-color: #0d6efd !important;
+  }
+</style>
 {% endblock %}
-
-
-
-
-

@@ -44,7 +44,6 @@
                             </select>
                         </div>
 
-
                         <div class="form-check form-check-inline">
                             <input 
                                 type="checkbox" 
@@ -97,103 +96,102 @@
 
 <script>
     function addShot(holeNumber, par) {
-    const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
+        const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
 
-    // Preserve existing form data
-    const form = document.getElementById('add-shots-form');
-    const formData = new FormData(form);
+        // Preserve existing form data
+        const form = document.getElementById('add-shots-form');
+        const formData = new FormData(form);
 
-    // Count existing shots for the hole by looking for distance fields
-    const existingShots = shotsContainer.querySelectorAll(
-        `[id^="hole_${holeNumber}_shot_"][id$="_distance"]`
-    );
+        // Count existing shots for the hole by looking for distance fields
+        const existingShots = shotsContainer.querySelectorAll(
+            `[id^="hole_${holeNumber}_shot_"][id$="_distance"]`
+        );
 
-    const newShotNum = existingShots.length + 1;
+        const newShotNum = existingShots.length + 1;
 
-    // Get the current lie from the last shot
-    let preselectedLie = 'Fairway'; // Default value
-    if (existingShots.length > 0) {
-        const lastShotLie = document.getElementById(`hole_${holeNumber}_shot_${existingShots.length}_lie`);
-        if (lastShotLie) {
-            preselectedLie = lastShotLie.value; // Set the lie to the previous shot's value
+        // Get the current lie from the last shot
+        let preselectedLie = 'Fairway'; // Default value
+        if (existingShots.length > 0) {
+            const lastShotLie = document.getElementById(`hole_${holeNumber}_shot_${existingShots.length}_lie`);
+            if (lastShotLie) {
+                preselectedLie = lastShotLie.value; // Set the lie to the previous shot's value
+            }
         }
-    }
 
-    // Add new fields for the shot
-    const newShotHTML = `
-        <div class="shot-card" id="hole_${holeNumber}_shot_${newShotNum}">
-            <div class="mb-3">
-                <label for="hole_${holeNumber}_shot_${newShotNum}_distance" class="form-label">Distance (yards):</label>
-                <input 
-                    type="number" 
-                    class="form-control" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                    required
+        // Add new fields for the shot
+        const newShotHTML = `
+            <div class="shot-card" id="hole_${holeNumber}_shot_${newShotNum}">
+                <div class="mb-3">
+                    <label for="hole_${holeNumber}_shot_${newShotNum}_distance" class="form-label">Distance (yards):</label>
+                    <input 
+                        type="number" 
+                        class="form-control" 
+                        name="hole_${holeNumber}_shot_${newShotNum}_distance" 
+                        id="hole_${holeNumber}_shot_${newShotNum}_distance" 
+                        required
+                    >
+                </div>
+                <div class="mb-3">
+                    <label for="hole_${holeNumber}_shot_${newShotNum}_lie" class="form-label">Lie:</label>
+                    <select 
+                        class="form-select" 
+                        name="hole_${holeNumber}_shot_${newShotNum}_lie" 
+                        id="hole_${holeNumber}_shot_${newShotNum}_lie" 
+                        required 
+                        onchange="updateMissDirection(${holeNumber}, ${newShotNum}, ${par})"
+                    >
+                        <option value="Fairway" ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
+                        <option value="Rough" ${preselectedLie === 'Rough' ? 'selected' : ''}>Rough</option>
+                        <option value="Bunker" ${preselectedLie === 'Bunker' ? 'selected' : ''}>Bunker</option>
+                        <option value="Recovery" ${preselectedLie === 'Recovery' ? 'selected' : ''}>Recovery</option>
+                        <option value="Green" ${preselectedLie === 'Green' ? 'selected' : ''}>Green</option>
+                    </select>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input 
+                        type="checkbox" 
+                        class="form-check-input" 
+                        name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
+                        id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
+                        value="1"
+                        onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB')"
+                    >
+                    <label for="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" class="form-check-label">Out of Bounds</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input 
+                        type="checkbox" 
+                        class="form-check-input" 
+                        name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
+                        id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
+                        value="1"
+                        onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard')"
+                    >
+                    <label for="hole_${holeNumber}_shot_${newShotNum}_hazard" class="form-check-label">Hazard/Unplayable</label>
+                </div>
+                <button 
+                    type="button" 
+                    class="btn btn-danger btn-sm" 
+                    onclick="removeShot(${holeNumber}, ${newShotNum})"
                 >
+                    Remove Shot
+                </button>
             </div>
-            <div class="mb-3">
-                <label for="hole_${holeNumber}_shot_${newShotNum}_lie" class="form-label">Lie:</label>
-                <select 
-                    class="form-select" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                    required 
-                    onchange="updateMissDirection(${holeNumber}, ${newShotNum}, ${par})"
-                >
-                    <option value="Fairway" ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
-                    <option value="Rough" ${preselectedLie === 'Rough' ? 'selected' : ''}>Rough</option>
-                    <option value="Bunker" ${preselectedLie === 'Bunker' ? 'selected' : ''}>Bunker</option>
-                    <option value="Recovery" ${preselectedLie === 'Recovery' ? 'selected' : ''}>Recovery</option>
-                    <option value="Green" ${preselectedLie === 'Green' ? 'selected' : ''}>Green</option>
-                </select>
-            </div>
-            <div class="form-check form-check-inline">
-                <input 
-                    type="checkbox" 
-                    class="form-check-input" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
-                    value="1"
-                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB')"
-                >
-                <label for="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" class="form-check-label">Out of Bounds</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input 
-                    type="checkbox" 
-                    class="form-check-input" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
-                    value="1"
-                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard')"
-                >
-                <label for="hole_${holeNumber}_shot_${newShotNum}_hazard" class="form-check-label">Hazard/Unplayable</label>
-            </div>
-            <button 
-                type="button" 
-                class="btn btn-danger btn-sm" 
-                onclick="removeShot(${holeNumber}, ${newShotNum})"
-            >
-                Remove Shot
-            </button>
-        </div>
-    `;
+        `;
 
-    shotsContainer.insertAdjacentHTML('beforeend', newShotHTML);
+        shotsContainer.insertAdjacentHTML('beforeend', newShotHTML);
 
-    // Restore form data to ensure no inputs are lost
-    for (const [key, value] of formData.entries()) {
-        const input = document.querySelector(`[name="${key}"]`);
-        if (input) {
-            input.value = value;
+        // Restore form data to ensure no inputs are lost
+        for (const [key, value] of formData.entries()) {
+            const input = document.querySelector(`[name="${key}"]`);
+            if (input) {
+                input.value = value;
+            }
         }
+
+        // Trigger updateMissDirection for the new shot if the preselected lie requires it
+        updateMissDirection(holeNumber, newShotNum, par);
     }
-
-    // Trigger updateMissDirection for the new shot if the preselected lie requires it
-    updateMissDirection(holeNumber, newShotNum, par);
-}
-
 
     function removeShot(holeNumber, shotNumber) {
         const shotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
@@ -206,48 +204,56 @@
         console.log(`updateMissDirection called with: holeNumber=${holeNumber}, shotNumber=${shotNumber}, par=${par}`);
 
         const lieElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_lie`);
-        console.log(`lieElement:`, lieElement);
-
         const previousLieElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber - 1}_lie`);
-        console.log(`previousLieElement:`, previousLieElement);
-
         const previousShotContainer = document.getElementById(`hole_${holeNumber}_shot_${shotNumber - 1}`);
-        console.log(`previousShotContainer:`, previousShotContainer);
-
-        if (!lieElement) {
-            console.error(`Lie element not found for hole ${holeNumber}, shot ${shotNumber}`);
+        if (!lieElement || !previousLieElement || !previousShotContainer) {
+            console.error("Missing lie element or previous shot container.");
             return;
         }
 
-        if (!previousLieElement) {
-            console.error(`Previous lie element not found for hole ${holeNumber}, shot ${shotNumber - 1}`);
-            return;
-        }
-
-        if (!previousShotContainer) {
-            console.error(`Previous shot container not found for hole ${holeNumber}, shot ${shotNumber - 1}`);
-            return;
-        }
-
-        // Remove any existing miss direction dropdown or compass
+        // 1) Determine the current UI type (if any)
+        let currentUI = "none";
         const existingMissDirection = document.getElementById(`hole_${holeNumber}_shot_${shotNumber - 1}_miss_direction`);
+        if (existingMissDirection) {
+            // If there's a radio group present, it's the L/R UI.
+            if (existingMissDirection.querySelectorAll('input[type="radio"][name*="_miss_direction"]').length === 2) {
+                currentUI = "leftright";
+            } 
+            // Otherwise, if there's a compass container, it's the compass UI.
+            else if (existingMissDirection.querySelector('.compass-container')) {
+                currentUI = "compass";
+            }
+        }
+        console.log("Current UI type:", currentUI);
+
+        // 2) Determine the new UI type based on conditions:
+        // For a non-par 3 Tee shot that missed Fairway/Green => use "leftright" UI.
+        // For an approach or par-3 tee shot (new lie ≠ "Green" and previous lie ≠ "Tee") => use "compass" UI.
+        let newUI = "none";
+        if (previousLieElement.value === "Tee" && par !== 3 && lieElement.value !== "Fairway" && lieElement.value !== "Green") {
+            newUI = "leftright";
+        } else if (lieElement.value !== "Green" && previousLieElement.value !== "Tee") {
+            newUI = "compass";
+        }
+        console.log("New UI type:", newUI);
+
+        // 3) If the UI type has not changed, do not re-render the miss-direction UI.
+        if (currentUI === newUI) {
+            console.log(`UI type remains "${newUI}". Retaining existing selection.`);
+            return;
+        }
+
+        // 4) Preserve current form data so we don't lose any values.
+        const form = document.getElementById('add-shots-form');
+        const formData = new FormData(form);
+
+        // 5) Remove any existing miss-direction UI in the previous shot.
         if (existingMissDirection) {
             existingMissDirection.remove();
         }
 
-        // Add in the scenario where we are playing a tee shot on a non par 3 and the out of bounds
-        // is selected 
-
-        // If the previous shot was from the Tee on a non-par 3 hole and the next lie is not Fairway or Green
-        // we want a simple left-right selector for the missed fairway.
-        if (
-            previousLieElement && 
-            previousLieElement.value === "Tee" &&
-            par !== 3 &&
-            lieElement.value !== "Fairway" &&
-            lieElement.value !== "Green"
-        ) {
-            // Tee shot on a non-par 3, missed fairway
+        // 6) Insert the new UI based on newUI type.
+        if (newUI === "leftright") {
             const lrSelector = `
                 <div class="mb-3" id="hole_${holeNumber}_shot_${shotNumber - 1}_miss_direction">
                     <label class="form-label">Miss Direction:</label>
@@ -261,7 +267,7 @@
                             required
                         >
                         <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber - 1}_left">L</label>
-
+        
                         <input 
                             type="radio" 
                             class="btn-check" 
@@ -275,26 +281,22 @@
                 </div>
             `;
             previousShotContainer.insertAdjacentHTML('beforeend', lrSelector);
-        } 
-        // Otherwise, if the new lie is NOT Green, we assume it's an approach shot or tee shot on par 3 
-        // that missed the green, so we show the compass.
-        else if (lieElement.value !== "Green" && previousLieElement.value !== "Tee") {
+        } else if (newUI === "compass") {
             const compassSelector = `
                 <div class="mb-3" id="hole_${holeNumber}_shot_${shotNumber - 1}_miss_direction">
                     <label class="form-label">Miss Direction:</label>
                     <div class="compass-container">
-                    <div class="compass-buttons">
-                        <button class="compass-btn">Long</button>
-                        <button class="compass-btn">Long Right</button>
-                        <button class="compass-btn">Right</button>
-                        <button class="compass-btn">Short Right</button>
-                        <button class="compass-btn">Short</button>
-                        <button class="compass-btn">Short Left</button>
-                        <button class="compass-btn">Left</button>
-                        <button class="compass-btn">Long Left</button>
+                        <div class="compass-buttons">
+                            <button type="button" class="compass-btn" data-direction="Long">Long</button>
+                            <button type="button" class="compass-btn" data-direction="Long Right">Long Right</button>
+                            <button type="button" class="compass-btn" data-direction="Right">Right</button>
+                            <button type="button" class="compass-btn" data-direction="Short Right">Short Right</button>
+                            <button type="button" class="compass-btn" data-direction="Short">Short</button>
+                            <button type="button" class="compass-btn" data-direction="Short Left">Short Left</button>
+                            <button type="button" class="compass-btn" data-direction="Left">Left</button>
+                            <button type="button" class="compass-btn" data-direction="Long Left">Long Left</button>
+                        </div>
                     </div>
-                </div>
-
                     <input 
                         type="hidden" 
                         name="hole_${holeNumber}_shot_${shotNumber - 1}_miss_direction" 
@@ -304,180 +306,192 @@
                 </div>
             `;
             previousShotContainer.insertAdjacentHTML('beforeend', compassSelector);
+            }
         }
-    }
+    // Event delegation for compass buttons.
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('compass-btn')) {
+            event.preventDefault();
 
-    function selectMissDirection(holeNumber, shotNumber, direction) {
-        const hiddenInput = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_miss_direction_input`);
-        if (hiddenInput) {
-            hiddenInput.value = direction;
+            // Find the closest compass-container element.
+            const compassContainer = event.target.closest('.compass-container');
+            if (!compassContainer) return;
+            // Remove the "selected" class from all compass buttons in this container.
+            const allCompassBtns = compassContainer.querySelectorAll('.compass-btn');
+            allCompassBtns.forEach(btn => btn.classList.remove('selected'));
+            // Add the "selected" class to the clicked button.
+            event.target.classList.add('selected');
+
+            // Debug: log the selected direction.
+            console.log("Selected direction:", event.target.dataset.direction);
+
+            // Update the hidden input field.
+            // The hidden input is located within the parent of the compass-container.
+            const parentDiv = compassContainer.parentElement;
+            const hiddenInput = parentDiv.querySelector(`input[type="hidden"][name*="_miss_direction"]`);
+            if (hiddenInput) {
+                hiddenInput.value = event.target.dataset.direction;
+                console.log("Updated hidden input value:", hiddenInput.value);
+            }
         }
-    }
+    });
 
     function addDummyShot(holeNumber, shotNumber, penaltyType) {
-    
+        const dummyShotId = `hole_dummy_${holeNumber}_shot_${shotNumber}_dummy_${penaltyType.toLowerCase()}`;
+        const nextShotId = `hole_${holeNumber}_shot_${shotNumber + 1}`;
+        const existingDummyShot = document.getElementById(dummyShotId);
+        const existingNextShot = document.getElementById(nextShotId);
 
-    const dummyShotId = `hole_dummy_${holeNumber}_shot_${shotNumber}_dummy_${penaltyType.toLowerCase()}`;
-    const nextShotId = `hole_${holeNumber}_shot_${shotNumber + 1}`;
-    const existingDummyShot = document.getElementById(dummyShotId);
-    const existingNextShot = document.getElementById(nextShotId);
+        // Get the values of the current shot
+        const currentDistance = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_distance`).value;
+        const currentLie = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_lie`).value;
+        
+        const penaltyCheckbox = document.getElementById(
+            `hole_${holeNumber}_shot_${shotNumber}_${penaltyType === "OOB" ? "out_of_bounds" : "hazard"}`
+        );
 
-    // Get the values of the current shot
-    const currentDistance = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_distance`).value;
-    const currentLie = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_lie`).value;
-    
-    const penaltyCheckbox = document.getElementById(
-        `hole_${holeNumber}_shot_${shotNumber}_${penaltyType === "OOB" ? "out_of_bounds" : "hazard"}`
-    );
+        const lrSelectorId = `hole_${holeNumber}_shot_${shotNumber}_miss_direction`;
+        const existingLrSelector = document.getElementById(lrSelectorId);
 
-    const lrSelectorId = `hole_${holeNumber}_shot_${shotNumber}_miss_direction`;
-    const existingLrSelector = document.getElementById(lrSelectorId);
+        // If the checkbox is checked and lrSelector does not already exist
+        if (penaltyCheckbox.checked && !existingLrSelector && currentLie === "Tee") {
+            const currentShotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
+            // Add the lrSelector
+            const lrSelectorHTML = `
+                <div class="mb-3" id="${lrSelectorId}">
+                    <label class="form-label">Miss Direction:</label>
+                    <div class="btn-group" role="group">
+                        <input 
+                            type="radio" 
+                            class="btn-check" 
+                            name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
+                            id="hole_${holeNumber}_shot_${shotNumber}_left" 
+                            value="Left" 
+                            required
+                        >
+                        <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber}_left">L</label>
 
-    // If the checkbox is checked and lrSelector does not already exist
-    if (penaltyCheckbox.checked && !existingLrSelector && currentLie === "Tee") {
-        const currentShotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
-
-        // Add the lrSelector
-        const lrSelectorHTML = `
-            <div class="mb-3" id="${lrSelectorId}">
-                <label class="form-label">Miss Direction:</label>
-                <div class="btn-group" role="group">
-                    <input 
-                        type="radio" 
-                        class="btn-check" 
-                        name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
-                        id="hole_${holeNumber}_shot_${shotNumber}_left" 
-                        value="Left" 
-                        required
-                    >
-                    <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber}_left">L</label>
-
-                    <input 
-                        type="radio" 
-                        class="btn-check" 
-                        name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
-                        id="hole_${holeNumber}_shot_${shotNumber}_right" 
-                        value="Right" 
-                        required
-                    >
-                    <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber}_right">R</label>
+                        <input 
+                            type="radio" 
+                            class="btn-check" 
+                            name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
+                            id="hole_${holeNumber}_shot_${shotNumber}_right" 
+                            value="Right" 
+                            required
+                        >
+                        <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber}_right">R</label>
+                    </div>
                 </div>
-            </div>
-        `;
-        currentShotElement.insertAdjacentHTML("beforeend", lrSelectorHTML);
+            `;
+            currentShotElement.insertAdjacentHTML("beforeend", lrSelectorHTML);
+        }
+        // If the checkbox is unchecked and lrSelector exists, remove it
+        else if (!penaltyCheckbox.checked && existingLrSelector) {
+            existingLrSelector.remove();
+        }
+        // If the checkbox is checked and no dummy shot exists, create both dummy and new shot
+        if (penaltyCheckbox.checked && !existingDummyShot) {
+            const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
+            // Create dummy shot HTML
+            const dummyShotHTML = `
+                <div class="shot-card" id="${dummyShotId}">
+                    <div class="mb-3">
+                        <label for="${dummyShotId}_distance" class="form-label">Distance (yards):</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            name="${dummyShotId}_distance" 
+                            id="${dummyShotId}_distance" 
+                            value="Penalty" 
+                            readonly
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label for="${dummyShotId}_lie" class="form-label">Lie:</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            name="${dummyShotId}_lie" 
+                            id="${dummyShotId}_lie" 
+                            value="Penalty" 
+                            readonly
+                        >
+                    </div>
+                </div>
+            `;
+            // Create new shot HTML with prefilled distance and lie
+            const nextShotHTML = `
+                <div class="shot-card" id="${nextShotId}">
+                    <div class="mb-3">
+                        <label for="hole_${holeNumber}_shot_${shotNumber + 1}_distance" class="form-label">Distance (yards):</label>
+                        <input 
+                            type="number" 
+                            class="form-control" 
+                            name="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
+                            id="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
+                            value="${currentDistance}" 
+                            required
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label for="hole_${holeNumber}_shot_${shotNumber + 1}_lie" class="form-label">Lie:</label>
+                        <select 
+                            class="form-select" 
+                            name="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
+                            id="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
+                            required
+                        >
+                            <option value="Tee" ${currentLie === "Tee" ? "selected" : ""}>Tee</option>
+                            <option value="Fairway" ${currentLie === "Fairway" ? "selected" : ""}>Fairway</option>
+                            <option value="Rough" ${currentLie === "Rough" ? "selected" : ""}>Rough</option>
+                            <option value="Bunker" ${currentLie === "Bunker" ? "selected" : ""}>Bunker</option>
+                            <option value="Recovery" ${currentLie === "Recovery" ? "selected" : ""}>Recovery</option>
+                            <option value="Green" ${currentLie === "Green" ? "selected" : ""}>Green</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input 
+                            type="checkbox" 
+                            class="form-check-input" 
+                            name="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
+                            id="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
+                            value="1"
+                            onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'OOB')"
+                        >
+                        <label for="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" class="form-check-label">Out of Bounds</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input 
+                            type="checkbox" 
+                            class="form-check-input" 
+                            name="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
+                            id="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
+                            value="1"
+                            onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'hazard')"
+                        >
+                        <label for="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" class="form-check-label">Hazard/Unplayable</label>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn btn-danger btn-sm" 
+                        onclick="removeShot(${holeNumber}, ${shotNumber + 1})"
+                    >
+                        Remove Shot
+                    </button>
+                </div>
+            `;
+
+            // Insert the dummy shot and the new shot below the current shot
+            const currentShotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
+            currentShotElement.insertAdjacentHTML("afterend", dummyShotHTML);
+            document.getElementById(dummyShotId).insertAdjacentHTML("afterend", nextShotHTML);
+        } 
+        // If the checkbox is unchecked, remove both the dummy and the new shot
+        else if (!penaltyCheckbox.checked) {
+            if (existingDummyShot) existingDummyShot.remove();
+            if (existingNextShot) existingNextShot.remove();
+        }
     }
-
-    // If the checkbox is unchecked and lrSelector exists, remove it
-    else if (!penaltyCheckbox.checked && existingLrSelector) {
-        existingLrSelector.remove();
-    }
-
-    // If the checkbox is checked and no dummy shot exists, create both dummy and new shot
-    if (penaltyCheckbox.checked && !existingDummyShot) {
-        const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
-
-        // Create dummy shot HTML
-        const dummyShotHTML = `
-            <div class="shot-card" id="${dummyShotId}">
-                <div class="mb-3">
-                    <label for="${dummyShotId}_distance" class="form-label">Distance (yards):</label>
-                    <input 
-                        type="text" 
-                        class="form-control" 
-                        name="${dummyShotId}_distance" 
-                        id="${dummyShotId}_distance" 
-                        value="Penalty" 
-                        readonly
-                    >
-                </div>
-                <div class="mb-3">
-                    <label for="${dummyShotId}_lie" class="form-label">Lie:</label>
-                    <input 
-                        type="text" 
-                        class="form-control" 
-                        name="${dummyShotId}_lie" 
-                        id="${dummyShotId}_lie" 
-                        value="Penalty" 
-                        readonly
-                    >
-                </div>
-            </div>
-        `;
-
-        // Create new shot HTML with prefilled distance and lie
-        const nextShotHTML = `
-            <div class="shot-card" id="${nextShotId}">
-                <div class="mb-3">
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_distance" class="form-label">Distance (yards):</label>
-                    <input 
-                        type="number" 
-                        class="form-control" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
-                        value="${currentDistance}" 
-                        required
-                    >
-                </div>
-                <div class="mb-3">
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_lie" class="form-label">Lie:</label>
-                    <select 
-                        class="form-select" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
-                        required
-                    >
-                        <option value="Tee" ${currentLie === "Tee" ? "selected" : ""}>Tee</option>
-                        <option value="Fairway" ${currentLie === "Fairway" ? "selected" : ""}>Fairway</option>
-                        <option value="Rough" ${currentLie === "Rough" ? "selected" : ""}>Rough</option>
-                        <option value="Bunker" ${currentLie === "Bunker" ? "selected" : ""}>Bunker</option>
-                        <option value="Recovery" ${currentLie === "Recovery" ? "selected" : ""}>Recovery</option>
-                        <option value="Green" ${currentLie === "Green" ? "selected" : ""}>Green</option>
-                    </select>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
-                        value="1"
-                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'OOB')"
-                    >
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" class="form-check-label">Out of Bounds</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
-                        value="1"
-                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'hazard')"
-                    >
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" class="form-check-label">Hazard/Unplayable</label>
-                </div>
-                <button 
-                    type="button" 
-                    class="btn btn-danger btn-sm" 
-                    onclick="removeShot(${holeNumber}, ${shotNumber + 1})"
-                >
-                    Remove Shot
-                </button>
-            </div>
-        `;
-
-        // Insert the dummy shot and the new shot below the current shot
-        const currentShotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
-        currentShotElement.insertAdjacentHTML("afterend", dummyShotHTML);
-        document.getElementById(dummyShotId).insertAdjacentHTML("afterend", nextShotHTML);
-    } 
-
-    // If the checkbox is unchecked, remove both the dummy and the new shot
-    else if (!penaltyCheckbox.checked) {
-        if (existingDummyShot) existingDummyShot.remove();
-        if (existingNextShot) existingNextShot.remove();
-    }
-}
 </script>
 
 <style>
@@ -486,104 +500,95 @@
         padding: 15px;
         margin-bottom: 10px;
         border-radius: 5px;
-        background-color: #fafafa; /* You can pick any light background color */
+        background-color: #fafafa;
     }
 
-/* Wrapper for the compass */
-.compass-container-wrapper {
-    display: flex; /* Center the compass within the page */
-    justify-content: center;
-    align-items: center;
-    margin: 50px auto; /* Adds spacing around the compass */
-}
+    /* Compass styles */
+    .compass-container-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 50px auto;
+    }
 
-/* Outer compass container */
-.compass-container {
-    position: relative; /* Allows proper layout of child elements */
-    width: 250px; /* Set size of the entire compass */
-    height: 250px;
-    background-color: #f8f9fa; /* Light background color for the compass */
-    display: flex; /* Center the inner elements */
-    justify-content: center;
-    align-items: center;
-    border: 2px solid #ccc; /* Optional border for the compass */
-}
+    .compass-container {
+        position: relative;
+        width: 250px;
+        height: 250px;
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 2px solid #ccc;
+    }
 
+    .compass-buttons {
+        position: relative;
+        display: grid;
+        width: 100%;
+        height: 100%;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        justify-items: center;
+        align-items: center;
+    }
 
-/* Compass buttons container */
-.compass-buttons {
-    position: relative; /* Ensures child buttons align within the grid */
-    display: grid; /* Enables grid layout for positioning buttons */
-    width: 100%; /* Match the size of the compass container */
-    height: 100%;
-    grid-template-columns: repeat(3, 1fr); /* Creates a 3x3 grid */
-    grid-template-rows: repeat(3, 1fr);
-    justify-items: center; /* Centers buttons horizontally in their cells */
-    align-items: center; /* Centers buttons vertically in their cells */
-}
+    .compass-btn {
+        width: 70px;
+        height: 70px;
+        background-color: #e9ecef;
+        border-radius: 50%;
+        border: 1px solid #ccc;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+    }
 
-/* Individual compass buttons */
-.compass-btn {
-    width: 70px; /* Diameter of the buttons */
-    height: 70px;
-    background-color: #e9ecef; /* Default button background color */
-    border-radius: 50%; /* Makes buttons circular */
-    border: 1px solid #ccc; /* Optional border for buttons */
-    display: flex; /* Centers text inside the button */
-    justify-content: center;
-    align-items: center;
-    cursor: pointer; /* Changes cursor to pointer for better UX */
-}
+    .compass-btn:hover {
+        background-color: #dee2e6;
+    }
 
-.compass-btn:hover {
-    background-color: #dee2e6; /* Button hover effect */
-}
+    /* Position compass buttons in the 3x3 grid */
+    .compass-buttons > .compass-btn:nth-child(1) { 
+        grid-column: 2; 
+        grid-row: 1; 
+    } 
+    .compass-buttons > .compass-btn:nth-child(2) { 
+        grid-column: 3; 
+        grid-row: 1; 
+    }
+    .compass-buttons > .compass-btn:nth-child(3) { 
+        grid-column: 3; 
+        grid-row: 2; 
+    }
+    .compass-buttons > .compass-btn:nth-child(4) { 
+        grid-column: 3; 
+        grid-row: 3; 
+    }
+    .compass-buttons > .compass-btn:nth-child(5) { 
+        grid-column: 2; 
+        grid-row: 3; 
+    }
+    .compass-buttons > .compass-btn:nth-child(6) { 
+        grid-column: 1; 
+        grid-row: 3; 
+    }
+    .compass-buttons > .compass-btn:nth-child(7) { 
+        grid-column: 1; 
+        grid-row: 2; 
+    }
+    .compass-buttons > .compass-btn:nth-child(8) { 
+        grid-column: 1; 
+        grid-row: 1; 
+    }
 
-/* Positioning buttons in the grid */
-.compass-buttons > .compass-btn:nth-child(1) { 
-    grid-column: 2; /* Center-top */
-    grid-row: 1; 
-} 
-
-.compass-buttons > .compass-btn:nth-child(2) { 
-    grid-column: 3; /* Top-right */
-    grid-row: 1; 
-}
-
-.compass-buttons > .compass-btn:nth-child(3) { 
-    grid-column: 3; /* Center-right */
-    grid-row: 2; 
-}
-
-.compass-buttons > .compass-btn:nth-child(4) { 
-    grid-column: 3; /* Bottom-right */
-    grid-row: 3; 
-}
-
-.compass-buttons > .compass-btn:nth-child(5) { 
-    grid-column: 2; /* Center-bottom */
-    grid-row: 3; 
-}
-
-.compass-buttons > .compass-btn:nth-child(6) { 
-    grid-column: 1; /* Bottom-left */
-    grid-row: 3; 
-}
-
-.compass-buttons > .compass-btn:nth-child(7) { 
-    grid-column: 1; /* Center-left */
-    grid-row: 2; 
-}
-
-.compass-buttons > .compass-btn:nth-child(8) { 
-    grid-column: 1; /* Top-left */
-    grid-row: 1; 
-}
-
-
-    
-
-    
+    /* Style for selected compass button */
+    .compass-btn.selected {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+    }
 </style>
 {% endblock %}
 

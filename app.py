@@ -17,7 +17,9 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime
+from collections import defaultdict
 
+import pprint
 
 
 app = Flask(__name__)
@@ -560,9 +562,11 @@ def get_rounds():
 def tee_stats():
     """
     Returns data specific to 'Off the Tee':
-      1) avg_off_tee_sg  (AVG of Round.sg_off_tee)
-      2) avg_tee_distance (AVG of distance_after - distance_before for shots of shot_type='Off the Tee')
-      3) distribution of miss_direction for tee shots
+      1) avg_off_tee_sg      (AVG of Round.sg_off_tee)
+      2) avg_tee_distance    (AVG of distance_before - distance_after for Off the Tee shots)
+      3) distribution of miss_direction for Off the Tee shots
+      4) cumulative percentage of Off the Tee shots finishing in "Fairway", "Bunker", "Rough", "Green", or "In the Hole"
+         (all other lies are excluded from this cumulative %).
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
@@ -572,7 +576,6 @@ def tee_stats():
     # -----------------------------
     # 1) AVG Off-The-Tee SG (Round)
     # -----------------------------
-    # Similar to /api/sg_by_shot_type, but focusing on Round.sg_off_tee
     sg_query = db.session.query(
         func.avg(Round.sg_off_tee).label('avg_off_tee_sg')
     ).filter(Round.userID == current_user.userID)
@@ -592,10 +595,8 @@ def tee_stats():
     avg_off_tee_sg = float(sg_result.avg_off_tee_sg or 0)
 
     # -------------------------------------------------
-    # 2) Average Tee Shot Distance (Shot table, shot_type='Off the Tee')
+    # 2) Average Tee Shot Distance (Off the Tee)
     # -------------------------------------------------
-    # We'll compute func.avg(Shot.distance_after - Shot.distance_before)
-    # and also join Round so we can apply the same filters (user, date, course, round).
     dist_query = db.session.query(
         func.avg(Shot.distance_before - Shot.distance_after).label('avg_tee_distance')
     ).join(Round, Shot.roundID == Round.roundID)\
@@ -616,10 +617,8 @@ def tee_stats():
     avg_tee_distance = float(dist_result.avg_tee_distance or 0)
 
     # -------------------------------------------------
-    # 3) Miss Direction Distribution (shot_type='Off the Tee')
+    # 3) Miss Direction Distribution (Off the Tee)
     # -------------------------------------------------
-    # We group by Shot.miss_direction and count how many. 
-    # Then we'll compute proportions on the front end or just return counts.
     miss_query = db.session.query(
         Shot.miss_direction,
         func.count(Shot.shotID).label("count_dir")
@@ -640,22 +639,68 @@ def tee_stats():
     miss_query = miss_query.group_by(Shot.miss_direction)
     miss_results = miss_query.all()
 
-    # Convert results into arrays for Chart.js (or any chart)
     directions = []
     direction_counts = []
-    total_shots = 0
+    total_shots_dir = 0
 
     for row in miss_results:
-        directions.append(row.miss_direction)       # e.g. "Left", "Right", "None", etc.
-        direction_counts.append(row.count_dir)      # integer count
-        total_shots += row.count_dir
+        directions.append(row.miss_direction)      
+        direction_counts.append(row.count_dir)     
+        total_shots_dir += row.count_dir
+
+    # -------------------------------------------------
+    # 4) Cumulative Percentage of Final Lies of Interest
+    # -------------------------------------------------
+    # We only care about: "Fairway", "Bunker", "Rough", "Green", "In the Hole"
+    # For Off the Tee shots
+    lie_query = db.session.query(
+        Shot.lie_after,
+        func.count(Shot.shotID).label("count_lie")
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .filter(Round.userID == current_user.userID, Shot.shot_type == "Off the Tee")
+
+    if course_id:
+        lie_query = lie_query.filter(Round.course_id == course_id)
+    if round_id:
+        lie_query = lie_query.filter(Round.roundID == round_id)
+    if start_date_str:
+        lie_query = lie_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        lie_query = lie_query.filter(Round.date_played <= end_date)
+
+    lie_query = lie_query.group_by(Shot.lie_after)
+    lie_results = lie_query.all()
+
+    # Put results into a dictionary like {"Fairway": x, "Bunker": y, ...}
+    final_lie_counts = {}
+    total_shots_lie = 0
+    for row in lie_results:
+        final_lie = row.lie_after
+        count_lie = row.count_lie
+        final_lie_counts[final_lie] = count_lie
+        total_shots_lie += count_lie
+
+    # We only want the sum of these categories
+    relevant_lies = ["Fairway", "Bunker", "Rough", "Green", "In the Hole"]
+    relevant_shot_sum = 0
+
+    for lie_key, count_val in final_lie_counts.items():
+        if lie_key in relevant_lies:
+            relevant_shot_sum += count_val
+
+    # Compute the cumulative % for these relevant lies
+    if total_shots_lie > 0:
+        cumulative_pct = round((relevant_shot_sum / total_shots_lie) * 100, 1)
+    else:
+        cumulative_pct = 0.0
 
     data = {
         "avg_off_tee_sg": round(avg_off_tee_sg, 2),
         "avg_tee_distance": round(avg_tee_distance, 2),
-        "miss_directions": directions,
-        "miss_counts": direction_counts,
-        "total_shots": int(total_shots)
+        "miss_directions": directions,       # e.g. ["Left", "Right", "None", etc.]
+        "miss_counts": direction_counts,     # e.g. [10, 5, 2, ...]
+        "total_shots": int(total_shots_dir), # total from the miss direction perspective
+        "cumulativeLiePct": cumulative_pct   # single number for card
     }
     return jsonify(data)
 
@@ -665,15 +710,18 @@ def approach_stats():
     """
     Returns data specific to Approach:
       1) avg_approach_sg (AVG of Round.sg_approach)
-      2) gir_percent (Approach shots that end on Green / total approach shots * 100)
-      3) distribution of approach shot miss_direction (excluding 'None')
+      2) greens_hit (Shots-based %: Approach shots that ended on Green / total approach shots)
+      3) gir_percent (HoleStats-based %: #holes with gir=True / total holes)
+      4) distribution of approach shot miss_direction (excluding 'None')
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
-    # 1) AVG Approach SG
+    # ---------------------------
+    # 1) Average Approach SG
+    # ---------------------------
     sg_query = db.session.query(
         func.avg(Round.sg_approach).label('avg_approach_sg')
     ).filter(Round.userID == current_user.userID)
@@ -692,12 +740,15 @@ def approach_stats():
     sg_result = sg_query.one()
     avg_approach_sg = float(sg_result.avg_approach_sg or 0)
 
-    # 2) GIR % for Approach Shots
+    # --------------------------------------------------------
+    # 2) "greens_hit" - The *original method* from Approach shots
+    #    (Shots that ended on Green / total Approach shots * 100)
+    # --------------------------------------------------------
     shot_query = db.session.query(
         Shot.miss_direction,
         Shot.lie_after
     ).join(Round, Shot.roundID == Round.roundID)\
-     .filter(Round.userID == current_user.userID, Shot.shot_type == "Approach")
+      .filter(Round.userID == current_user.userID, Shot.shot_type == "Approach")
 
     if course_id:
         shot_query = shot_query.filter(Round.course_id == course_id)
@@ -710,31 +761,46 @@ def approach_stats():
 
     approach_shots = shot_query.all()
     total_approach_shots = len(approach_shots)
-    gir_count = sum(1 for s in approach_shots if s.lie_after == "Green")
-    gir_percent = (gir_count / total_approach_shots) * 100 if total_approach_shots > 0 else 0.0
+    green_hits = sum(1 for s in approach_shots if s.lie_after == "Green")
+    # "greens_hit" => percentage of approach shots that ended on Green
+    greens_hit = (green_hits / total_approach_shots * 100) if total_approach_shots > 0 else 0.0
 
-    # 3) Miss Direction Distribution (excluding 'None')
+    # -------------------------------------------------------
+    # 3) "gir_percent" - The *new method* from HoleStats
+    #    (#holes with gir=True / total holes * 100)
+    # -------------------------------------------------------
+    hole_stats_query = db.session.query(HoleStats).join(Round, HoleStats.roundID == Round.roundID)\
+        .filter(Round.userID == current_user.userID)
+
+    if course_id:
+        hole_stats_query = hole_stats_query.filter(Round.course_id == course_id)
+    if round_id:
+        hole_stats_query = hole_stats_query.filter(Round.roundID == round_id)
+    if start_date_str:
+        hole_stats_query = hole_stats_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        hole_stats_query = hole_stats_query.filter(Round.date_played <= end_date)
+
+    hole_stats = hole_stats_query.all()
+    total_holes = len(hole_stats)
+    gir_count = sum(1 for hs in hole_stats if hs.gir)
+    gir_percent = (gir_count / total_holes * 100) if total_holes > 0 else 0.0
+
+    # -------------------------------------------------------
+    # 4) Distribution of approach shot miss_direction
+    # -------------------------------------------------------
     from collections import defaultdict
     miss_counter = defaultdict(int)
-
     for shot in approach_shots:
         if shot.lie_after != "Green":
             direction = shot.miss_direction or "Unknown"
             miss_counter[direction] += 1
 
-    # Define the 8 fixed miss directions in the desired order
+    # 8 fixed directions
     fixed_directions = [
-        "Long Right",    # 22.5° - 67.5°
-        "Right",         # 67.5° - 112.5°
-        "Short Right",   # 112.5° - 157.5°
-        "Short",         # 157.5° - 202.5°
-        "Short Left",    # 202.5° - 247.5°
-        "Left",          # 247.5° - 292.5°
-        "Long Left",     # 292.5° - 337.5°
-        "Long"     # 337.5° - 382.5° (same as 337.5° - 22.5°)
+        "Long Right", "Right", "Short Right", "Short",
+        "Short Left", "Left", "Long Left", "Long"
     ]
-
-    # Ensure all fixed directions are present
     miss_directions = []
     miss_counts = []
     for direction in fixed_directions:
@@ -743,6 +809,9 @@ def approach_stats():
 
     data = {
         "avg_approach_sg": round(avg_approach_sg, 2),
+        # The old Shot-based method:
+        "greens_hit": round(greens_hit, 1),
+        # The new HoleStats-based method:
         "gir_percent": round(gir_percent, 1),
         "miss_directions": miss_directions,
         "miss_counts": miss_counts,
@@ -750,20 +819,172 @@ def approach_stats():
     }
     return jsonify(data)
 
+
+from collections import defaultdict
+from datetime import datetime
+from flask import jsonify, request
+from flask_login import login_required, current_user
+from sqlalchemy import func
+
+@app.route('/api/approach_table', methods=['GET'])
+@login_required
+def approach_table():
+    """
+    Returns a JSON object containing an array of Approach Shots stats:
+      - distanceRange : e.g. "50-75", "75-100", ...
+      - sgPerShot     : strokes gained average per shot in this range
+      - avgProximity  : average final proximity (distance_after, *3 if lie_after != "Green")
+      - greenHitPct   : percentage of shots where lie_after is "Green" or "In the Hole"
+    """
+
+    # 1) Parse filters
+    course_id = request.args.get('course', type=int)
+    round_id  = request.args.get('round', type=int)
+    start_date_str = request.args.get('startDate')
+    end_date_str   = request.args.get('endDate')
+
+    # 2) Query Shots joined with Round
+    shots_query = (db.session.query(Shot)
+                   .join(Round, Shot.roundID == Round.roundID)
+                   .filter(Round.userID == current_user.userID,
+                           Shot.shot_type == "Approach"))
+
+    # Apply filters
+    if course_id:
+        shots_query = shots_query.filter(Round.course_id == course_id)
+    if round_id:
+        shots_query = shots_query.filter(Round.roundID == round_id)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            shots_query = shots_query.filter(Round.date_played >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid startDate format. Use YYYY-MM-DD."}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            shots_query = shots_query.filter(Round.date_played <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid endDate format. Use YYYY-MM-DD."}), 400
+
+    all_approach_shots = shots_query.all()
+
+    # 3) Define Approach Distance Bins
+    approach_bins = {
+        "50-75":   {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "75-100":  {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "100-125": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "125-150": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "150-175": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "175-200": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "200-225": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "225-250": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "250-275": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "275+":    {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+    }
+
+    def get_approach_bin(d):
+        """
+        Return the bin label based on distance_before.
+        For distances < 50, skip or handle differently if desired.
+        """
+        if 50 <= d < 75:
+            return "50-75"
+        elif 75 <= d < 100:
+            return "75-100"
+        elif 100 <= d < 125:
+            return "100-125"
+        elif 125 <= d < 150:
+            return "125-150"
+        elif 150 <= d < 175:
+            return "150-175"
+        elif 175 <= d < 200:
+            return "175-200"
+        elif 200 <= d < 225:
+            return "200-225"
+        elif 225 <= d < 250:
+            return "225-250"
+        elif 250 <= d < 275:
+            return "250-275"
+        else:
+            # d >= 275
+            return "275+"
+
+    # 4) Populate Bin Stats
+    for shot in all_approach_shots:
+        dist_before = shot.distance_before
+        if dist_before < 50:
+            # If you want to skip approach shots < 50 yds:
+            continue
+            # Or handle them in a separate bin if you wish
+
+        bin_label = get_approach_bin(dist_before)
+        approach_bins[bin_label]["countShots"] += 1
+        approach_bins[bin_label]["sumSG"]      += shot.strokes_gained
+
+        # 4a) Count "Green Hits"
+        # "Green Hit" if lie_after is "Green" or "In the Hole"
+        if shot.lie_after in ("Green", "In the Hole"):
+            approach_bins[bin_label]["countGreenHits"] += 1
+
+        # 4b) Calculate proximity
+        final_dist = shot.distance_after
+        if shot.lie_after != "Green":
+            final_dist *= 3
+        approach_bins[bin_label]["sumProximity"] += final_dist
+
+    # 5) Build Output
+    approachData = []
+    for bin_label, stats in approach_bins.items():
+        cShots    = stats["countShots"]
+        totalSG   = stats["sumSG"]
+        totalProx = stats["sumProximity"]
+        greenHits = stats["countGreenHits"]
+
+        if cShots > 0:
+            sgPerShot  = totalSG / cShots
+            avgProx    = totalProx / cShots
+            greenHitPct = (greenHits / cShots) * 100.0
+        else:
+            sgPerShot   = 0.0
+            avgProx     = 0.0
+            greenHitPct = 0.0
+
+        row = {
+            "distanceRange": bin_label,
+            "sgPerShot": round(sgPerShot, 3),     # e.g., 3 decimal places
+            "avgProximity": round(avgProx, 1),   # e.g., 1 decimal place
+            "greenHitPct": round(greenHitPct, 1) # e.g., 1 decimal place
+        }
+        approachData.append(row)
+
+    # 6) Return JSON
+    return jsonify({"approachData": approachData})
+
+
+from collections import defaultdict
+import pprint  # For better formatting
+
+from collections import defaultdict
+import pprint  # For better formatting
+
 @app.route('/api/short_game_stats', methods=['GET'])
 @login_required
 def short_game_stats():
     """
     Returns:
-      - up_down_percent (percentage of successful up-and-down)
-      - avg_around_green_sg (average Round.sg_around_green across filtered rounds)
+      - avg_around_green_sg (float)
+      - up_down_percent (float, based on "Around the Green" shots)
+      - bunkerData (list of dicts for each distance bracket)
+      - nonBunkerData (list of dicts for each distance bracket)
     """
+    # --------------- Query Parameters ---------------
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
-    # 1) Average SG Around Green
+    # --------------- 1) Calculate Average SG Around Green ---------------
     sg_query = db.session.query(
         func.avg(Round.sg_around_green).label('avg_around_green_sg')
     ).filter(Round.userID == current_user.userID)
@@ -782,69 +1003,362 @@ def short_game_stats():
     sg_result = sg_query.one()
     avg_around_green_sg = float(sg_result.avg_around_green_sg or 0)
 
-    # 2) Up & Down %
-    #    Assume HoleStats.up_and_down = True if up/down was successful
-    #    We'll join Round -> HoleStats to filter the same way
-    ud_query = db.session.query(HoleStats.up_and_down)\
-        .join(Round, HoleStats.roundID == Round.roundID)\
+    # --------------- 2) Remove Existing Up & Down % Calculation ---------------
+    # The previous calculation based on HoleStats is removed.
+    # Up & Down % will now be calculated based on Shot records.
+
+    # --------------- 3) Fetch All Shots for Accurate Up & Down % ---------------
+    # Fetch all shots (not just "Around the Green") to accurately find the next shot
+    shots_query = (
+        db.session.query(Shot)
+        .join(Round, Shot.roundID == Round.roundID)
         .filter(Round.userID == current_user.userID)
+    )
 
     if course_id:
-        ud_query = ud_query.filter(Round.course_id == course_id)
+        shots_query = shots_query.filter(Round.course_id == course_id)
     if round_id:
-        ud_query = ud_query.filter(Round.roundID == round_id)
+        shots_query = shots_query.filter(Round.roundID == round_id)
     if start_date_str:
-        ud_query = ud_query.filter(Round.date_played >= start_date)
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        shots_query = shots_query.filter(Round.date_played >= start_date)
     if end_date_str:
-        ud_query = ud_query.filter(Round.date_played <= end_date)
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        shots_query = shots_query.filter(Round.date_played <= end_date)
 
-    hole_stats = ud_query.all()
-    total_attempts = len(hole_stats)
-    successful = sum(1 for (ud,) in hole_stats if ud)
+    # Fetch all relevant shots
+    all_shots = shots_query.all()
 
-    up_down_percent = 0.0
-    if total_attempts > 0:
-        up_down_percent = successful / total_attempts * 100
+    # Group shots by (roundID, holeID) to maintain shot sequence per hole
+    shots_by_round_hole = defaultdict(list)
+    for s in all_shots:
+        shots_by_round_hole[(s.roundID, s.holeID)].append(s)
 
+    # Sort each list by shotID (assuming shotID is chronological)
+    for key in shots_by_round_hole:
+        shots_by_round_hole[key].sort(key=lambda x: x.shotID)
+
+    # ----- Debugging Section Start -----
+    print("----- shots_by_round_hole -----")
+    for (round_id, hole_id), shots in shots_by_round_hole.items():
+        print(f"Round ID: {round_id}, Hole ID: {hole_id}")
+        shot_list = []
+        for shot in shots:
+            shot_info = {
+                "Shot ID": shot.shotID,
+                "Distance Before": shot.distance_before,
+                "Lie Before": shot.lie_before,
+                "Distance After": shot.distance_after,
+                "Lie After": shot.lie_after,
+                "Shot Type": shot.shot_type  # Added for clarity
+            }
+            shot_list.append(shot_info)
+        pprint.pprint(shot_list, indent=4)
+    print("----- End of shots_by_round_hole -----")
+    # ----- Debugging Section End -----
+
+    # --------------- 4) Prepare Structures for Bunker vs. Non-Bunker ---------------
+    # We'll track stats in 4 distance "bins": <10, 10–20, 20–30, 30+
+    # Each bin tracks totalShots, sumProximity, upDownSuccessShots
+
+    bunker_bins = {
+        "<10": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "10-20": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "20-30": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "30+": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+    }
+    non_bunker_bins = {
+        "<10": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "10-20": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "20-30": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "30+": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+    }
+
+    # Global counters for Up & Down %
+    total_arounds = 0
+    total_up_down_success = 0
+
+    def get_distance_bin(dist_before):
+        if dist_before < 10:
+            return "<10"
+        elif dist_before < 20:
+            return "10-20"
+        elif dist_before < 30:
+            return "20-30"
+        else:
+            return "30+"
+
+    # Helper to check if a shot is "up & down" success
+    #  - If the shot.lie_after == "In the Hole", success = True
+    #  - Else if next shot in same hole is "In the Hole", success = True
+    #  - Otherwise = False
+    def shot_up_and_down_success(shot, next_shot):
+        # If this shot itself finishes in the hole
+        if shot.lie_after == "In the Hole":
+            return True
+        # Or the subsequent shot is in the hole
+        if next_shot and next_shot.lie_after == "In the Hole":
+            return True
+        return False
+
+    # --------------- 5) Iterate All Shots and Fill Data ---------------
+    for (round_hole_key, shot_list) in shots_by_round_hole.items():
+        # Debug: Print the entire shot list with enumeration
+        print(f"Processing Round {round_hole_key[0]}, Hole {round_hole_key[1]}")
+        print(list(enumerate(shot_list)))
+
+        for i, shot in enumerate(shot_list):
+            # Only process "Around the Green" shots
+            if shot.shot_type != "Around the Green":
+                continue  # Skip non-Around the Green shots
+
+            # Determine if bunker or non-bunker
+            is_bunker = (shot.lie_before == "Bunker")
+
+            # Find the next shot (any shot type)
+            next_shot = shot_list[i+1] if (i+1 < len(shot_list)) else None
+
+            # Debug: Print the next_shot details
+            if next_shot:
+                print(f"Current Shot ID: {shot.shotID}, Next Shot ID: {next_shot.shotID}")
+            else:
+                print(f"Current Shot ID: {shot.shotID}, Next Shot: None")
+
+            # Bucket by distance_before
+            dist_bin = get_distance_bin(shot.distance_before)
+
+            # Check up & down success
+            up_down_success = 1 if shot_up_and_down_success(shot, next_shot) else 0
+
+            # Update global counters
+            total_arounds += 1
+            total_up_down_success += up_down_success
+
+            # Add to the appropriate bin
+            if is_bunker:
+                bunker_bins[dist_bin]["count"] += 1
+                bunker_bins[dist_bin]["sumProximity"] += shot.distance_after
+                bunker_bins[dist_bin]["upDownSuccess"] += up_down_success
+            else:
+                non_bunker_bins[dist_bin]["count"] += 1
+                non_bunker_bins[dist_bin]["sumProximity"] += shot.distance_after
+                non_bunker_bins[dist_bin]["upDownSuccess"] += up_down_success
+
+    # --------------- 6) Convert Bins to Lists for JSON ---------------
+    def convert_bins_to_list(bins_dict):
+        results = []
+        for distance_range in ["<10", "10-20", "20-30", "30+"]:
+            count = bins_dict[distance_range]["count"]
+            sum_prox = bins_dict[distance_range]["sumProximity"]
+            ud_success = bins_dict[distance_range]["upDownSuccess"]
+
+            avg_prox = (sum_prox / count) if count > 0 else 0.0
+            up_down_pct = (ud_success / count * 100) if count > 0 else 0.0
+
+            results.append({
+                "distanceRange": distance_range,
+                "avgProximity": round(avg_prox, 1),
+                "upDownPercent": round(up_down_pct, 1)
+            })
+        return results
+
+    bunker_data = convert_bins_to_list(bunker_bins)
+    non_bunker_data = convert_bins_to_list(non_bunker_bins)
+
+    # --------------- 7) Calculate Up & Down % Based on Shots ---------------
+    up_down_percent = (total_up_down_success / total_arounds * 100) if total_arounds > 0 else 0.0
+
+    # --------------- 8) Return the Complete Data ---------------
     data = {
         "avg_around_green_sg": round(avg_around_green_sg, 2),
-        "up_down_percent": round(up_down_percent, 1)
+        "up_down_percent": round(up_down_percent, 1),  # Updated Up & Down %
+        "bunkerData": bunker_data,
+        "nonBunkerData": non_bunker_data
     }
     return jsonify(data)
+
+
 
 @app.route('/api/putting_stats', methods=['GET'])
 @login_required
 def putting_stats():
     """
-    Returns:
-      - avg_putting_sg: Average strokes gained for putting.
+    Returns a JSON object containing:
+      - avg_putting_sg (float): Average Strokes Gained for Putting
+      - puttingData (list of dicts): Stats for each distance bin
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
-    # Query for average SG Putting
-    q = db.session.query(
+    # 1) Calculate Average SG Putting
+    # Assuming 'sg_putting' is a field in the Round model
+    sg_query = db.session.query(
         func.avg(Round.sg_putting).label('avg_putting_sg')
     ).filter(Round.userID == current_user.userID)
 
     # Apply filters
     if course_id:
-        q = q.filter(Round.course_id == course_id)
+        sg_query = sg_query.filter(Round.course_id == course_id)
     if round_id:
-        q = q.filter(Round.roundID == round_id)
+        sg_query = sg_query.filter(Round.roundID == round_id)
     if start_date_str:
-        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        q = q.filter(Round.date_played >= start_date)
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            sg_query = sg_query.filter(Round.date_played >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid startDate format. Use YYYY-MM-DD."}), 400
     if end_date_str:
-        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-        q = q.filter(Round.date_played <= end_date)
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            sg_query = sg_query.filter(Round.date_played <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid endDate format. Use YYYY-MM-DD."}), 400
 
-    result = q.one()
-    avg_putting_sg = round(float(result.avg_putting_sg or 0), 2)
+    sg_result = sg_query.one()
+    avg_putting_sg = round(float(sg_result.avg_putting_sg or 0), 2)
 
-    return jsonify({"avg_putting_sg": avg_putting_sg})
+    # 2) Query all Shots (not just 'Putting'), so we have the full hole sequence
+    shots_query = (db.session.query(Shot)
+                   .join(Round, Shot.roundID == Round.roundID)
+                   .filter(Round.userID == current_user.userID))
+
+    # Apply filters
+    if course_id:
+        shots_query = shots_query.filter(Round.course_id == course_id)
+    if round_id:
+        shots_query = shots_query.filter(Round.roundID == round_id)
+    if start_date_str:
+        shots_query = shots_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        shots_query = shots_query.filter(Round.date_played <= end_date)
+
+    all_shots = shots_query.all()
+
+    # 3) Group shots by (roundID, holeID) to maintain shot sequence per hole
+    shots_by_round_hole = defaultdict(list)
+    for s in all_shots:
+        shots_by_round_hole[(s.roundID, s.holeID)].append(s)
+
+    # Sort each list by shotID (assuming shotID is chronological)
+    for key in shots_by_round_hole:
+        shots_by_round_hole[key].sort(key=lambda x: x.shotID)
+
+    # 4) Prepare Structures for Putting Bins
+    putting_bins = {
+        "0-3":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "3-6":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "6-9":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "9-12":   {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "12-15":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "15-20":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "20-25":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "25-30":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "30-40":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "40-50":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "50-60":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "60+":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+    }
+
+    def get_putting_bin(d):
+        if d < 3:
+            return "0-3"
+        elif d < 6:
+            return "3-6"
+        elif d < 9:
+            return "6-9"
+        elif d < 12:
+            return "9-12"
+        elif d < 15:
+            return "12-15"
+        elif d < 20:
+            return "15-20"
+        elif d < 25:
+            return "20-25"
+        elif d < 30:
+            return "25-30"
+        elif d < 40:
+            return "30-40"
+        elif d < 50:
+            return "40-50"
+        elif d < 60:
+            return "50-60"
+        else:
+            return "60+"
+
+    def is_three_putt_avoided(shot_list, i):
+        """
+        Returns True if from shot_list[i], we complete the hole in <= 2 putts.
+        Specifically:
+          - If this shot.lie_after == 'In the Hole', then 1 putt => avoid 3 putt
+          - Else if next shot (i+1) is in the same hole & also finishes 'In the Hole', => 2 putts => avoid 3 putt
+          - Otherwise => it's at least a 3-putt from here => return False.
+        """
+        curr_shot = shot_list[i]
+        # If this putt itself goes in:
+        if curr_shot.lie_after == "In the Hole":
+            return True
+        
+        # Otherwise, check the next shot
+        if (i + 1) < len(shot_list):
+            next_shot = shot_list[i+1]
+            # Ensure it's the same hole
+            if next_shot.holeID == curr_shot.holeID and next_shot.lie_after == "In the Hole":
+                return True  # 2 total putts
+        return False  # 3+ putts
+
+    # 5) Iterate over each hole's shot list
+    for (round_id, hole_id), shot_list in shots_by_round_hole.items():
+        for i, shot in enumerate(shot_list):
+            # We only care about Putting shots
+            if shot.shot_type != "Putting":
+                continue
+
+            # Determine which bin this shot belongs to
+            bin_label = get_putting_bin(shot.distance_before)
+
+            # Update the counters
+            putting_bins[bin_label]["countShots"] += 1
+
+            # Make rate: is the putt holed right now?
+            if shot.lie_after == "In the Hole":
+                putting_bins[bin_label]["countMakes"] += 1
+
+            # 3-Putt Avoidance
+            if is_three_putt_avoided(shot_list, i):
+                putting_bins[bin_label]["count3PuttAvoid"] += 1
+
+            # Sum next putt distance (i.e., distance_after)
+            # If the ball goes in, distance_after is 0
+            putting_bins[bin_label]["sumNextDist"] += shot.distance_after
+
+    # 6) Convert the data into a list of rows for JSON
+    puttingData = []
+    for bin_label, stats in putting_bins.items():
+        cShots   = stats["countShots"]
+        cMakes   = stats["countMakes"]
+        cAvoid   = stats["count3PuttAvoid"]
+        sumDist  = stats["sumNextDist"]
+
+        makeRate         = (cMakes / cShots * 100) if cShots > 0 else 0.0
+        threePuttAvoid   = (cAvoid / cShots * 100) if cShots > 0 else 0.0
+        avgNextPuttDist  = (sumDist / cShots)       if cShots > 0 else 0.0
+
+        row = {
+            "distanceRange":     bin_label,
+            "makeRate":          round(makeRate, 1),
+            "threePuttAvoid":    round(threePuttAvoid, 1),
+            "avgNextPuttDist":   round(avgNextPuttDist, 1)
+        }
+        puttingData.append(row)
+
+    # 7) Return as JSON including avg_putting_sg
+    data = {
+        "avg_putting_sg": avg_putting_sg,
+        "puttingData": puttingData
+    }
+    return jsonify(data)
 
 @app.route('/api/distance_histogram', methods=['GET'])
 @login_required
