@@ -8,7 +8,8 @@ class Round(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('courses.courseID'), nullable=False)
     tee_id = db.Column(db.Integer, db.ForeignKey('tees.teeID'), nullable=False)
     date_played = db.Column(db.Date, nullable=False)
-    score = db.Column(db.Integer, nullable = False)
+    round_type = db.Column(db.String(50))
+    score = db.Column(db.Integer)
     score_to_par = db.Column(db.Integer, nullable = False)
 
     # -- NEW: store aggregated SG by shot type

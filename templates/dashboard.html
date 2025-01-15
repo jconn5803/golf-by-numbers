@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block content %}
-<h1 class="mb-4">User Dashboard</h1>
+<h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
 
 <!-- FILTER FORM -->
 <form id="filterForm" class="row g-3 mb-4">
@@ -28,7 +28,7 @@
       {% for r in user_rounds %}
       <option value="{{ r.roundID }}">
         {{ r.course.name }} - {{ r.date_played }}
-      </option>
+      </option>{
       {% endfor %}
     </select>
   </div>
@@ -284,7 +284,7 @@
         <tr>
           <th>Distance Range</th>
           <th>SG per Shot</th>
-          <th>Proximity to Hole</th>
+          <th>Proximity to Hole (ft)</th>
           <th>Green Hit %</th>
         </tr>
       </thead>
@@ -323,7 +323,7 @@
       <thead>
         <tr>
           <th>Distance</th>
-          <th>Avg Proximity</th>
+          <th>Avg Proximity (ft)</th>
           <th>Up & Down %</th>
         </tr>
       </thead>
@@ -337,7 +337,7 @@
       <thead>
         <tr>
           <th>Distance</th>
-          <th>Avg Proximity</th>
+          <th>Avg Proximity (ft)</th>
           <th>Up & Down %</th>
         </tr>
       </thead>
@@ -367,7 +367,7 @@
           <th>Distance Range</th>
           <th>Make Rate (%)</th>
           <th>3-Putt Avoid (%)</th>
-          <th>Avg Next Putt Distance</th>
+          <th>Avg Next Putt Distance (ft)</th>
         </tr>
       </thead>
       <tbody id="puttingTableBody">
@@ -509,40 +509,46 @@
     });
   }
 
-  async function updateApproachTable(params) {
-    try {
-      // Fetch approach table data from the API endpoint.
-      const response = await fetch(`/api/approach_table?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch Approach Table data");
+      async function updateApproachTable(params) {
+      try {
+        // Fetch approach table data from the API endpoint.
+        const response = await fetch(`/api/approach_table?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to fetch Approach Table data");
 
-      const data = await response.json(); // Expected format: { approachData: [{distanceRange, sgPerShot, avgProximity, greenHitPct}, ...] }
-      const tableBody = document.getElementById("approachTableBody");
-      if (!tableBody) {
-        console.error("No table body with id 'approachTableBody' found.");
-        return;
-      }
+        const data = await response.json(); // { approachData: [{ distanceRange, sgPerShot, avgProximity, greenHitPct }, ...] }
+        const tableBody = document.getElementById("approachTableBody");
+        if (!tableBody) {
+          console.error("No table body with id 'approachTableBody' found.");
+          return;
+        }
 
-      // Clear existing rows.
-      tableBody.innerHTML = "";
-      
-      // Populate rows.
-      if (data.approachData && Array.isArray(data.approachData)) {
-        data.approachData.forEach(row => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${row.distanceRange}</td>
-            <td>${row.sgPerShot}</td>
-            <td>${row.avgProximity}</td>
-            <td>${row.greenHitPct}%</td>
-          `;
-          tableBody.appendChild(tr);
-        });
+        // Clear existing rows.
+        tableBody.innerHTML = "";
+        
+        // Populate rows.
+        if (data.approachData && Array.isArray(data.approachData)) {
+          data.approachData.forEach(row => {
+
+            // Debug to see the actual values
+            console.log("Row data:", row);
+
+            // Check if sgPerShot is > 0 to prepend '+'
+            const displaySg = row.sgPerShot > 0 ? `+${row.sgPerShot}` : row.sgPerShot;
+            
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${row.distanceRange}</td>
+              <td>${displaySg}</td>
+              <td>${row.avgProximity}</td>
+              <td>${row.greenHitPct}%</td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error("Error updating approach table:", err);
       }
-    } catch (err) {
-      console.error("Error updating approach table:", err);
     }
-  }
-
   async function updateDashboard() {
     const params = new URLSearchParams({
       course: document.getElementById("course").value,
@@ -554,12 +560,30 @@
     // 1) Overall Stats
     const statsRes = await fetch(`/api/dashboard_stats?${params.toString()}`);
     const statsData = await statsRes.json();
-    scoringAvgCard.textContent = statsData.scoring_avg;
-    scoringVsParCard.textContent = statsData.scoring_avg_to_par;
+    
+    // Obtain the number of rounds
     totalRoundsCard.textContent = statsData.total_rounds;
-    par3Card.textContent = statsData.par3_avg;
-    par4Card.textContent = statsData.par4_avg;
-    par5Card.textContent = statsData.par5_avg;
+
+    if (statsData.total_rounds === 0){
+      scoringAvgCard.textContent = "--";
+      scoringVsParCard.textContent = "--";
+      par3Card.textContent = "--";
+      par4Card.textContent = "--";
+      par5Card.textContent = "--";
+    } else {
+      scoringAvgCard.textContent = statsData.scoring_avg;
+      
+      // Ensure that the + sign if > 0
+      if (statsData.scoring_avg_to_par > 0){
+          scoringVsParCard.textContent = `+${statsData.scoring_avg_to_par}`;
+      } else {
+          scoringVsParCard.textContent = statsData.scoring_avg_to_par;
+      }
+      
+      par3Card.textContent = statsData.par3_avg;
+      par4Card.textContent = statsData.par4_avg;
+      par5Card.textContent = statsData.par5_avg;
+    }
 
     // 2) Overall Strokes Gained Chart
     const sgRes = await fetch(`/api/sg_by_shot_type?${params.toString()}`);
@@ -590,10 +614,22 @@
     // 3) Tee Stats
     const teeRes = await fetch(`/api/tee_stats?${params.toString()}`);
     const teeData = await teeRes.json();
-    teeSGCard.textContent = teeData.avg_off_tee_sg;
-    teeDistanceCard.textContent = teeData.avg_tee_distance;
-    document.getElementById("teeLieCard").textContent = teeData.cumulativeLiePct + "%";
 
+    if (statsData.total_rounds === 0){
+      teeSGCard.textContent = "--";
+      teeDistanceCard.textContent = "--";
+      document.getElementById("teeLieCard").textContent = "--" + "%";
+    } else {
+      
+      if (teeData.avg_off_tee_sg > 0){
+          teeSGCard.textContent = `+${teeData.avg_off_tee_sg}`;
+      } else {
+          teeSGCard.textContent = teeData.avg_off_tee_sg;
+      }
+      
+      teeDistanceCard.textContent = Math.round(teeData.avg_tee_distance) + "yds";
+      document.getElementById("teeLieCard").textContent = teeData.cumulativeLiePct + "%";
+    }
     let leftCount = 0, rightCount = 0, centerCount = 0;
     const directions = teeData.miss_directions;
     const counts = teeData.miss_counts;
@@ -627,8 +663,21 @@
     // 4) Approach Stats (Using D3.js for the miss visualization)
     const approachRes = await fetch(`/api/approach_stats?${params.toString()}`);
     const approachData = await approachRes.json();
-    approachSGCard.textContent = approachData.avg_approach_sg;
-    approachGirCard.textContent = approachData.gir_percent + "%";
+    
+    if (statsData.total_rounds === 0){
+      approachSGCard.textContent = "--";
+      approachGirCard.textContent = "--";
+    } else {
+
+      // Ensure that the + sign if > 0
+      if (approachData.avg_approach_sg > 0){
+        approachSGCard.textContent = `+${approachData.avg_approach_sg}`;
+      } else {
+        approachSGCard.textContent = approachData.avg_approach_sg;
+      }
+      
+      approachGirCard.textContent = approachData.gir_percent + "%";
+    }
 
     // Prepare D3 data for miss directions.
     const missData = approachData.miss_directions.map((dir, i) => ({
@@ -736,48 +785,136 @@
     // 6) Short Game Stats
     const sgShortRes = await fetch(`/api/short_game_stats?${params.toString()}`);
     const sgShortData = await sgShortRes.json();
-    upDownPercentCard.textContent = sgShortData.up_down_percent + "%";
-    aroundGreenSGCard.textContent = sgShortData.avg_around_green_sg;
+    
+    if (statsData.total_rounds === 0){
+      upDownPercentCard.textContent = "--";
+      aroundGreenSGCard.textContent = "--";
+    } else {
+        if (sgShortData.avg_around_green_sg > 0){
+          aroundGreenSGCard.textContent = `+${sgShortData.avg_around_green_sg}`;
+        } else {
+          aroundGreenSGCard.textContent = sgShortData.avg_around_green_sg;
+        }
+      upDownPercentCard.textContent = sgShortData.up_down_percent + "%";
+      
+    }
+
     const bunkerContainer = document.getElementById("bunkerTableBody");
     bunkerContainer.innerHTML = "";
+   // If bunkerData is empty or each row has zeros, we'll show "--"
+    const noBunkerData = !sgShortData.bunkerData || sgShortData.bunkerData.length === 0
+                        || sgShortData.bunkerData.every(row => 
+                              row.avgProximity === 0 && row.upDownPercent === 0
+                            );
+
+    if (!sgShortData.bunkerData) {
+      console.warn("No bunkerData array in sgShortData");
+      return; 
+    }
+
+    // Populate rows
     sgShortData.bunkerData.forEach(row => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${row.distanceRange}</td>
-        <td>${row.avgProximity}</td>
-        <td>${row.upDownPercent}%</td>
-      `;
+      if (noBunkerData) {
+        // Display distanceRange but all numeric values as "--"
+        tr.innerHTML = `
+          <td>${row.distanceRange}</td>
+          <td>--</td>
+          <td>--</td>
+        `;
+      } else {
+        // Show actual data
+        tr.innerHTML = `
+          <td>${row.distanceRange}</td>
+          <td>${row.avgProximity}</td>
+          <td>${row.upDownPercent}%</td>
+        `;
+      }
       bunkerContainer.appendChild(tr);
     });
+
+    // 2) Non-Bunker Shots Table
     const nonBunkerContainer = document.getElementById("nonBunkerTableBody");
     nonBunkerContainer.innerHTML = "";
+
+    const noNonBunkerData = !sgShortData.nonBunkerData || sgShortData.nonBunkerData.length === 0
+                            || sgShortData.nonBunkerData.every(row => 
+                                row.avgProximity === 0 && row.upDownPercent === 0
+                              );
+
+    if (!sgShortData.nonBunkerData) {
+      console.warn("No nonBunkerData array in sgShortData");
+      return;
+    }
+
     sgShortData.nonBunkerData.forEach(row => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${row.distanceRange}</td>
-        <td>${row.avgProximity}</td>
-        <td>${row.upDownPercent}%</td>
-      `;
+      if (noNonBunkerData) {
+        tr.innerHTML = `
+          <td>${row.distanceRange}</td>
+          <td>--</td>
+          <td>--</td>
+        `;
+      } else {
+        tr.innerHTML = `
+          <td>${row.distanceRange}</td>
+          <td>${row.avgProximity}</td>
+          <td>${row.upDownPercent}%</td>
+        `;
+      }
       nonBunkerContainer.appendChild(tr);
     });
 
     // 7) Putting Stats
     const puttingRes = await fetch(`/api/putting_stats?${params.toString()}`);
     const puttingData = await puttingRes.json();
-    puttingSGCard.textContent = puttingData.avg_putting_sg;
+    
+    if (statsData.total_rounds === 0){
+      puttingSGCard.textContent = "--";
+    } else {
+      
+      if (puttingData.avg_putting_sg > 0){
+        puttingSGCard.textContent = `+${puttingData.avg_putting_sg}`;
+      } else {
+        puttingSGCard.textContent = puttingData.avg_putting_sg; // remains as is
+      }
+    }
+
+
     const puttingTableBody = document.getElementById("puttingTableBody");
     puttingTableBody.innerHTML = "";
-    puttingData.puttingData.forEach(row => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${row.distanceRange}</td>
-        <td>${row.makeRate}%</td>
-        <td>${row.threePuttAvoid}%</td>
-        <td>${row.avgNextPuttDist}</td>
-      `;
-      puttingTableBody.appendChild(tr);
-    });
 
+    // Check if there's no or all-zero data
+    const noPuttingData = !puttingData.puttingData || puttingData.puttingData.length === 0
+      || puttingData.puttingData.every(row =>
+          // adjust logic to your data structure
+          row.makeRate === 0 && row.threePuttAvoid === 0 && row.avgNextPuttDist === 0
+        );
+
+    // Populate the table rows
+    if (puttingData.puttingData && Array.isArray(puttingData.puttingData)) {
+      puttingData.puttingData.forEach(row => {
+        const tr = document.createElement("tr");
+        if (noPuttingData) {
+          // Display the distance range but show "--" for numeric columns
+          tr.innerHTML = `
+            <td>${row.distanceRange}</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          `;
+        } else {
+          // Show actual values
+          tr.innerHTML = `
+            <td>${row.distanceRange}</td>
+            <td>${row.makeRate}%</td>
+            <td>${row.threePuttAvoid}%</td>
+            <td>${row.avgNextPuttDist}</td>
+          `;
+        }
+        puttingTableBody.appendChild(tr);
+      });
+    }
     // 8) Distance Histogram (Overall)
     const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
     const histData = await histRes.json();
@@ -818,34 +955,7 @@
     });
   }
 
-  async function updateApproachTable(params) {
-    try {
-      const response = await fetch(`/api/approach_table?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch Approach Table data");
-
-      const data = await response.json(); // Expected { approachData: [ { distanceRange, sgPerShot, avgProximity, greenHitPct }, ... ] }
-      const tableBody = document.getElementById("approachTableBody");
-      if (!tableBody) {
-        console.error("No table body with id 'approachTableBody' found.");
-        return;
-      }
-      tableBody.innerHTML = "";
-      if (data.approachData && Array.isArray(data.approachData)) {
-        data.approachData.forEach(row => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${row.distanceRange}</td>
-            <td>${row.sgPerShot}</td>
-            <td>${row.avgProximity}</td>
-            <td>${row.greenHitPct}%</td>
-          `;
-          tableBody.appendChild(tr);
-        });
-      }
-    } catch (err) {
-      console.error("Error updating approach table:", err);
-    }
-  }
+ 
 
   document.addEventListener("DOMContentLoaded", updateDashboard);
 </script>
