@@ -8,9 +8,9 @@ class Round(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('courses.courseID'), nullable=False)
     tee_id = db.Column(db.Integer, db.ForeignKey('tees.teeID'), nullable=False)
     date_played = db.Column(db.Date, nullable=False)
-    round_type = db.Column(db.String(50))
-    score = db.Column(db.Integer)
-    score_to_par = db.Column(db.Integer, nullable = False)
+    round_type = db.Column(db.String(50), nullable=False)
+    score = db.Column(db.Integer, nullable = True)
+    score_to_par = db.Column(db.Integer, nullable = True)
 
     # -- NEW: store aggregated SG by shot type
     sg_off_tee = db.Column(db.Float, default=0.0)
@@ -33,16 +33,16 @@ class HoleStats(db.Model):
     holeID = db.Column(db.Integer, db.ForeignKey('holes.holeID'), nullable=False)
     
     # True if the user hit the green in regulation
-    gir = db.Column(db.Boolean, default=False) 
+    gir = db.Column(db.Boolean, default=False, nullable = False) 
     
     # True if user’s tee shot ended on the fairway (for par 4, par 5)
-    fairway_hit = db.Column(db.Boolean, default=False)
+    fairway_hit = db.Column(db.Boolean, default=False, nullable = False)
 
     # Up and down (1 = yes, 0 = no, Null = not applicable)
-    up_and_down = db.Column(db.Boolean, default = False)
+    up_and_down = db.Column(db.Boolean, default = False, nullable = False)
 
     # Hole score
-    hole_score = db.Column(db.Integer)
+    hole_score = db.Column(db.Integer, nullable = False)
 
     # Relationship
     round = db.relationship("Round", back_populates="hole_stats")

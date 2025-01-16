@@ -184,9 +184,10 @@ def add_round():
         course_id = request.form.get('course')
         tee_id = request.form.get('tee')
         date_played_str = request.form.get('date_played')
+        round_type = request.form.get('round_type')
 
         # Validate form data
-        if not course_id or not tee_id or not date_played_str:
+        if not course_id or not tee_id or not date_played_str or not round_type:
             return "All fields are required.", 400
 
         # Convert the date string to a Python date object
@@ -200,6 +201,7 @@ def add_round():
             userID=current_user.userID,
             course_id=course_id,
             tee_id = tee_id,
+            round_type = round_type,
             date_played=date_played
         )
         db.session.add(new_round)
@@ -228,6 +230,7 @@ def add_shots(roundID):
         round_score = 0
         # 1) Insert Shots + Track Shots per Hole
         for hole in holes:
+            # Initialise Hole score - which is tracked as a sum of shots and penalty shots
             num_shots = 1
             hole_penalty_shots = 0
             while True:
@@ -385,6 +388,7 @@ def sg_by_shot_type():
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -400,6 +404,8 @@ def sg_by_shot_type():
         q = q.filter(Round.course_id == course_id)
     if round_id:
         q = q.filter(Round.roundID == round_id)
+    if round_type:
+        q = q.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         q = q.filter(Round.date_played >= start_date)
@@ -435,6 +441,7 @@ def dashboard_stats():
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -449,6 +456,8 @@ def dashboard_stats():
         round_query = round_query.filter(Round.course_id == course_id)
     if round_id:
         round_query = round_query.filter(Round.roundID == round_id)
+    if round_type:
+        round_query = round_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         round_query = round_query.filter(Round.date_played >= start_date)
@@ -456,11 +465,27 @@ def dashboard_stats():
         end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
         round_query = round_query.filter(Round.date_played <= end_date)
 
+    # Obtain the total number of rounds
     round_result = round_query.one()
-    avg_score = float(round_result.avg_score or 0)
-    avg_score_to_par = float(round_result.avg_score_to_par or 0)
     total_rounds = int(round_result.num_rounds or 0)
 
+    # Add in a condition for when the total rounds is 0
+    # The front end will need adapting to display a value such as --
+    if total_rounds == 0:
+        data = {
+            "scoring_avg": None,
+            "scoring_avg_to_par": None,
+            "total_rounds": 0,
+            "par3_avg": None,
+            "par4_avg": None,
+            "par5_avg": None
+        }
+        return jsonify(data)
+
+    # Calculate the scoring averages
+    avg_score = float(round_result.avg_score)
+    avg_score_to_par = float(round_result.avg_score_to_par)
+     
     # 2) Hole-level stats for Par 3, 4, 5
     hs_query = (db.session.query(HoleStats.hole_score, Hole.par)
                 .join(Round, HoleStats.roundID == Round.roundID)
@@ -471,6 +496,8 @@ def dashboard_stats():
         hs_query = hs_query.filter(Round.course_id == course_id)
     if round_id:
         hs_query = hs_query.filter(Round.roundID == round_id)
+    if round_type:
+        hs_query = hs_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         hs_query = hs_query.filter(Round.date_played >= start_date)
@@ -522,6 +549,7 @@ def get_rounds():
     # Get query parameters
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -532,6 +560,8 @@ def get_rounds():
         query = query.filter(Round.course_id == course_id)
     if round_id:
         query = query.filter(Round.roundID == round_id)
+    if round_type:
+        query = query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         query = query.filter(Round.date_played >= start_date)
@@ -570,6 +600,7 @@ def tee_stats():
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -584,6 +615,8 @@ def tee_stats():
         sg_query = sg_query.filter(Round.course_id == course_id)
     if round_id:
         sg_query = sg_query.filter(Round.roundID == round_id)
+    if round_type:
+        sg_query = sg_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         sg_query = sg_query.filter(Round.date_played >= start_date)
@@ -606,6 +639,8 @@ def tee_stats():
         dist_query = dist_query.filter(Round.course_id == course_id)
     if round_id:
         dist_query = dist_query.filter(Round.roundID == round_id)
+    if round_type:
+        dist_query = dist_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         dist_query = dist_query.filter(Round.date_played >= start_date)
@@ -629,6 +664,8 @@ def tee_stats():
         miss_query = miss_query.filter(Round.course_id == course_id)
     if round_id:
         miss_query = miss_query.filter(Round.roundID == round_id)
+    if round_type:
+        miss_query = miss_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         miss_query = miss_query.filter(Round.date_played >= start_date)
@@ -663,6 +700,8 @@ def tee_stats():
         lie_query = lie_query.filter(Round.course_id == course_id)
     if round_id:
         lie_query = lie_query.filter(Round.roundID == round_id)
+    if round_type:
+        lie_query = lie_query.filter(Round.round_type == round_type)
     if start_date_str:
         lie_query = lie_query.filter(Round.date_played >= start_date)
     if end_date_str:
@@ -716,6 +755,7 @@ def approach_stats():
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -730,6 +770,8 @@ def approach_stats():
         sg_query = sg_query.filter(Round.course_id == course_id)
     if round_id:
         sg_query = sg_query.filter(Round.roundID == round_id)
+    if round_type:
+        sg_query = sg_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         sg_query = sg_query.filter(Round.date_played >= start_date)
@@ -754,6 +796,8 @@ def approach_stats():
         shot_query = shot_query.filter(Round.course_id == course_id)
     if round_id:
         shot_query = shot_query.filter(Round.roundID == round_id)
+    if round_type:
+        shot_query = shot_query.filter(Round.round_type == round_type)
     if start_date_str:
         shot_query = shot_query.filter(Round.date_played >= start_date)
     if end_date_str:
@@ -776,6 +820,8 @@ def approach_stats():
         hole_stats_query = hole_stats_query.filter(Round.course_id == course_id)
     if round_id:
         hole_stats_query = hole_stats_query.filter(Round.roundID == round_id)
+    if round_type:
+        hole_stats_query = hole_stats_query.filter(Round.round_type == round_type)
     if start_date_str:
         hole_stats_query = hole_stats_query.filter(Round.date_played >= start_date)
     if end_date_str:
@@ -840,6 +886,7 @@ def approach_table():
     # 1) Parse filters
     course_id = request.args.get('course', type=int)
     round_id  = request.args.get('round', type=int)
+    round_type  = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str   = request.args.get('endDate')
 
@@ -854,6 +901,8 @@ def approach_table():
         shots_query = shots_query.filter(Round.course_id == course_id)
     if round_id:
         shots_query = shots_query.filter(Round.roundID == round_id)
+    if round_type:
+        shots_query = shots_query.filter(Round.round_type == round_type)
     if start_date_str:
         try:
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
@@ -871,16 +920,16 @@ def approach_table():
 
     # 3) Define Approach Distance Bins
     approach_bins = {
-        "50-75":   {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "75-100":  {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "100-125": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "125-150": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "150-175": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "175-200": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "200-225": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "225-250": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "250-275": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
-        "275+":    {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "50-75 yds":   {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "75-100 yds":  {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "100-125 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "125-150 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "150-175 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "175-200 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "200-225 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "225-250 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "250-275 yds": {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
+        "275+ yds":    {"countShots": 0, "sumSG": 0.0, "sumProximity": 0.0, "countGreenHits": 0},
     }
 
     def get_approach_bin(d):
@@ -889,26 +938,26 @@ def approach_table():
         For distances < 50, skip or handle differently if desired.
         """
         if 50 <= d < 75:
-            return "50-75"
+            return "50-75 yds"
         elif 75 <= d < 100:
-            return "75-100"
+            return "75-100 yds"
         elif 100 <= d < 125:
-            return "100-125"
+            return "100-125 yds"
         elif 125 <= d < 150:
-            return "125-150"
+            return "125-150 yds"
         elif 150 <= d < 175:
-            return "150-175"
+            return "150-175 yds"
         elif 175 <= d < 200:
-            return "175-200"
+            return "175-200 yds"
         elif 200 <= d < 225:
-            return "200-225"
+            return "200-225 yds"
         elif 225 <= d < 250:
-            return "225-250"
+            return "225-250 yds"
         elif 250 <= d < 275:
-            return "250-275"
+            return "250-275 yds"
         else:
             # d >= 275
-            return "275+"
+            return "275+ yds"
 
     # 4) Populate Bin Stats
     for shot in all_approach_shots:
@@ -981,6 +1030,7 @@ def short_game_stats():
     # --------------- Query Parameters ---------------
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -993,6 +1043,8 @@ def short_game_stats():
         sg_query = sg_query.filter(Round.course_id == course_id)
     if round_id:
         sg_query = sg_query.filter(Round.roundID == round_id)
+    if round_type:
+        sg_query = sg_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         sg_query = sg_query.filter(Round.date_played >= start_date)
@@ -1019,6 +1071,8 @@ def short_game_stats():
         shots_query = shots_query.filter(Round.course_id == course_id)
     if round_id:
         shots_query = shots_query.filter(Round.roundID == round_id)
+    if round_type:
+        shots_query = shots_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         shots_query = shots_query.filter(Round.date_played >= start_date)
@@ -1062,16 +1116,16 @@ def short_game_stats():
     # Each bin tracks totalShots, sumProximity, upDownSuccessShots
 
     bunker_bins = {
-        "<10": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
-        "10-20": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
-        "20-30": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
-        "30+": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "<10 yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "10-20 yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "20-30 yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "30+ yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
     }
     non_bunker_bins = {
-        "<10": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
-        "10-20": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
-        "20-30": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
-        "30+": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "<10 yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "10-20 yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "20-30 yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
+        "30+ yds": {"count": 0, "sumProximity": 0.0, "upDownSuccess": 0},
     }
 
     # Global counters for Up & Down %
@@ -1080,13 +1134,13 @@ def short_game_stats():
 
     def get_distance_bin(dist_before):
         if dist_before < 10:
-            return "<10"
+            return "<10 yds"
         elif dist_before < 20:
-            return "10-20"
+            return "10-20 yds"
         elif dist_before < 30:
-            return "20-30"
+            return "20-30 yds"
         else:
-            return "30+"
+            return "30+ yds"
 
     # Helper to check if a shot is "up & down" success
     #  - If the shot.lie_after == "In the Hole", success = True
@@ -1147,7 +1201,7 @@ def short_game_stats():
     # --------------- 6) Convert Bins to Lists for JSON ---------------
     def convert_bins_to_list(bins_dict):
         results = []
-        for distance_range in ["<10", "10-20", "20-30", "30+"]:
+        for distance_range in ["<10 yds", "10-20 yds", "20-30 yds", "30+ yds"]:
             count = bins_dict[distance_range]["count"]
             sum_prox = bins_dict[distance_range]["sumProximity"]
             ud_success = bins_dict[distance_range]["upDownSuccess"]
@@ -1189,6 +1243,7 @@ def putting_stats():
     """
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -1203,6 +1258,8 @@ def putting_stats():
         sg_query = sg_query.filter(Round.course_id == course_id)
     if round_id:
         sg_query = sg_query.filter(Round.roundID == round_id)
+    if round_type:
+        sg_query = sg_query.filter(Round.round_type == round_type)
     if start_date_str:
         try:
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
@@ -1229,6 +1286,8 @@ def putting_stats():
         shots_query = shots_query.filter(Round.course_id == course_id)
     if round_id:
         shots_query = shots_query.filter(Round.roundID == round_id)
+    if round_type:
+        shots_query = shots_query.filter(Round.round_type == round_type)
     if start_date_str:
         shots_query = shots_query.filter(Round.date_played >= start_date)
     if end_date_str:
@@ -1247,45 +1306,45 @@ def putting_stats():
 
     # 4) Prepare Structures for Putting Bins
     putting_bins = {
-        "0-3":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "3-6":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "6-9":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "9-12":   {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "12-15":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "15-20":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "20-25":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "25-30":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "30-40":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "40-50":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "50-60":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
-        "60+":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "0-3 ft":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "3-6 ft":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "6-9 ft":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "9-12 ft":   {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "12-15 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "15-20 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "20-25 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "25-30 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "30-40 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "40-50 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "50-60 ft":  {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
+        "60+ ft":    {"countShots": 0, "countMakes": 0, "count3PuttAvoid": 0, "sumNextDist": 0.0},
     }
 
     def get_putting_bin(d):
         if d < 3:
-            return "0-3"
+            return "0-3 ft"
         elif d < 6:
-            return "3-6"
+            return "3-6 ft"
         elif d < 9:
-            return "6-9"
+            return "6-9 ft"
         elif d < 12:
-            return "9-12"
+            return "9-12 ft"
         elif d < 15:
-            return "12-15"
+            return "12-15 ft"
         elif d < 20:
-            return "15-20"
+            return "15-20 ft"
         elif d < 25:
-            return "20-25"
+            return "20-25 ft"
         elif d < 30:
-            return "25-30"
+            return "25-30 ft"
         elif d < 40:
-            return "30-40"
+            return "30-40 ft"
         elif d < 50:
-            return "40-50"
+            return "40-50 ft"
         elif d < 60:
-            return "50-60"
+            return "50-60 ft"
         else:
-            return "60+"
+            return "60+ ft"
 
     def is_three_putt_avoided(shot_list, i):
         """
@@ -1372,6 +1431,7 @@ def distance_histogram():
     # 1) Parse request args (filters)
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
 
@@ -1385,6 +1445,8 @@ def distance_histogram():
         shot_query = shot_query.filter(Round.course_id == course_id)
     if round_id:
         shot_query = shot_query.filter(Round.roundID == round_id)
+    if round_type:
+        shot_query = shot_query.filter(Round.round_type == round_type)
     if start_date_str:
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         shot_query = shot_query.filter(Round.date_played >= start_date)
