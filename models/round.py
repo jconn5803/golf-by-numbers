@@ -36,10 +36,10 @@ class HoleStats(db.Model):
     gir = db.Column(db.Boolean, default=False, nullable = False) 
     
     # True if user’s tee shot ended on the fairway (for par 4, par 5)
-    fairway_hit = db.Column(db.Boolean, default=False, nullable = False)
+    fairway_hit = db.Column(db.Boolean, default=False, nullable = True)
 
     # Up and down (1 = yes, 0 = no, Null = not applicable)
-    up_and_down = db.Column(db.Boolean, default = False, nullable = False)
+    up_and_down = db.Column(db.Boolean, default = False, nullable = True)
 
     # Hole score
     hole_score = db.Column(db.Integer, nullable = False)
