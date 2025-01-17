@@ -37,6 +37,17 @@
             <input type="date" class="form-control" id="date_played" name="date_played" required>
         </div>
 
+        <!-- Round Type Selection -->
+        <div class="mb-3">
+            <label for="round_type" class="form-label">Round Type</label>
+            <select class="form-select" id="round_type" name="round_type" required>
+                <option value="" disabled selected>Choose a round type...</option>
+                <option value="Practice">Practice</option>
+                <option value="Qualifying">Qualifying</option>
+                <option value="Tournament">Tournament</option>
+            </select>
+        </div>
+
         <!-- Submit Button -->
         <div class="text-center">
             <button type="submit" class="btn btn-primary">Next</button>
@@ -77,3 +88,4 @@
     });
 </script>
 {% endblock %}
+
