@@ -790,7 +790,7 @@ def approach_stats():
         Shot.miss_direction,
         Shot.lie_after
     ).join(Round, Shot.roundID == Round.roundID)\
-      .filter(Round.userID == current_user.userID, Shot.shot_type == "Approach")
+      .filter(Round.userID == current_user.userID, Shot.shot_type == "Approach", Shot.lie_before != "Recovery")
 
     if course_id:
         shot_query = shot_query.filter(Round.course_id == course_id)
@@ -835,7 +835,6 @@ def approach_stats():
     # -------------------------------------------------------
     # 4) Distribution of approach shot miss_direction
     # -------------------------------------------------------
-    from collections import defaultdict
     miss_counter = defaultdict(int)
     for shot in approach_shots:
         if shot.lie_after != "Green":

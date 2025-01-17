@@ -183,7 +183,7 @@ function updateMissDirection(holeNumber, shotNumber, par) {
     } 
     // For an approach or par-3 tee shot => "compass" UI.
     else if (
-        (lieElement.value !== "Green" && previousLieElement.value !== "Tee") ||
+        (lieElement.value !== "Green" && previousLieElement.value !== "Recovery" && previousLieElement.value !== "Tee") ||
         (lieElement.value !== "Green" && par === 3)
     ) {
         newUI = "compass";
