@@ -21,6 +21,13 @@ from collections import defaultdict
 
 import pprint
 
+# Stripe modules
+import os 
+from dotenv import load_dotenv
+import stripe
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"
@@ -38,6 +45,101 @@ login_manager.login_view = 'login'  # Redirect users to the login page if not lo
 @login_manager.user_loader
 def load_user(userID):
     return User.query.get(int(userID))
+
+# Configure Stripe with secret key from environment variable
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+@app.route('/create-checkout-session', methods=['POST'])
+@login_required
+def create_checkout_session():
+    # "plan" can be "monthly" or "annual" based on user selection
+    selected_plan = request.form.get("plan", "monthly")
+
+    # Map plan choice to your Stripe price IDs
+    price_id_map = {
+        "monthly": "price_1QjRKPRtYOXcVqXwJfRNhvnU",  # Replace with your real monthly price ID from Stripe
+        "annual": "price_1QjRKvRtYOXcVqXw8OL7zf9g" ,   # Replace with your real annual price ID from Stripe
+    }
+    price_id = price_id_map.get(selected_plan)
+    if not price_id:
+        return jsonify({"error": "Invalid plan selected"}), 400
+
+    try:
+        # Create a Checkout Session for a subscription
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[{
+                'price': price_id,
+                'quantity': 1,
+            }],
+            customer_email=current_user.email,  # Pre-fill the user email
+            success_url=url_for('payment_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=url_for('payment_cancel', _external=True),
+        )
+        return jsonify({'id': session.id})
+    except Exception as e:
+        return jsonify(error=str(e)), 400
+    
+
+@app.route('/subscribe')
+@login_required
+def subscribe_page():
+    stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    return render_template('subscribe.html', stripe_publishable_key=stripe_publishable_key)
+
+@app.route('/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError:
+        # Invalid payload
+        return "Invalid payload", 400
+    except stripe.error.SignatureVerificationError:
+        # Invalid signature
+        return "Invalid signature", 400
+
+    # Handle the event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        customer_id = session.get('customer')
+        subscription_id = session.get('subscription')
+
+        # Retrieve the customer from Stripe to get more details if needed
+        customer = stripe.Customer.retrieve(customer_id)
+        user_email = customer.email
+
+        # Find the user in your database
+        user = User.query.filter_by(email=user_email).first()
+        if user:
+            user.stripe_customer_id = customer_id
+            user.subscription_active = True
+            # Optionally, retrieve subscription details to set subscription_plan
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            # Assuming you have metadata or other ways to identify the plan
+            plan = subscription['items']['data'][0]['price']['id']
+            user.subscription_plan = plan
+            db.session.commit()
+
+    # Handle other event types as needed
+
+    return "Success", 200
+
+@app.route('/payment-success')
+@login_required
+def payment_success():
+    return render_template('payment_success.html')
+    
+@app.route('/payment-cancel')
+@login_required
+def payment_cancel():
+    return render_template('payment_cancel.html')
 
 @app.route('/')
 def index():

@@ -1,0 +1,37 @@
+<!-- subscribe.html -->
+{% extends "base.html" %}
+{% block content %}
+  <h2>Subscribe to UnderParData</h2>
+  <button id="subscribe-monthly" class="btn btn-primary">Subscribe Monthly</button>
+  <button id="subscribe-annually" class="btn btn-secondary">Subscribe Annually</button>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe("{{ stripe_publishable_key }}"); // Pass this from your Flask route
+    console.log(stripe)
+
+    document.querySelector("#subscribe-monthly").addEventListener("click", function() {
+      createCheckoutSession("monthly");
+    });
+    document.querySelector("#subscribe-annually").addEventListener("click", function() {
+      createCheckoutSession("annual");
+    });
+
+    function createCheckoutSession(plan) {
+      fetch("/create-checkout-session", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: new URLSearchParams({"plan": plan})
+      })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.id) {
+          stripe.redirectToCheckout({ sessionId: data.id });
+        } else {
+          console.error("Error creating checkout session:", data);
+        }
+      })
+      .catch((err) => console.error(err));
+    }
+  </script>
+{% endblock %}
