@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Strokes Gained Calculator{% endblock %}
+
+{% block content %}
+<div class="card border-primary shadow-lg rounded p-4">
+    <div class="card-body">
+        <h1 class="text-center text-primary mb-4">Strokes Gained Calculator</h1>
+        <form id="calculator-form" action="/" method="POST" class="row g-4">
+
+            <!-- Lie Before -->
+            <div class="col-md-6">
+                <label for="before_lie" class="form-label fw-bold">Lie before shot:</label>
+                <select class="form-select border-primary" id="before_lie" name="before_lie" required>
+                    <option value="Tee" {% if before_lie == 'Tee' %}selected{% endif %}>Tee</option>
+                    <option value="Fairway" {% if before_lie == 'Fairway' %}selected{% endif %}>Fairway</option>
+                    <option value="Rough" {% if before_lie == 'Rough' %}selected{% endif %}>Rough</option>
+                    <option value="Bunker" {% if before_lie == 'Bunker' %}selected{% endif %}>Bunker</option>
+                    <option value="Recovery" {% if before_lie == 'Recovery' %}selected{% endif %}>Recovery</option>
+                    <option value="Green" {% if before_lie == 'Green' %}selected{% endif %}>Green</option>
+                </select>
+            </div>
+
+            <!-- Distance Before -->
+            <div class="col-md-6">
+                <label for="before_distance" class="form-label fw-bold" id="before-distance-label">Distance to hole before shot ({{ 'Metres' if unit == 'metres' else 'Yards' }})</label>
+                <input type="number" step="any" class="form-control border-primary" id="before_distance" name="before_distance" 
+                       value="{{ before_distance if before_distance is not none else '' }}" required>
+                {% if errors.before_distance %}
+                <div class="text-danger">{{ errors.before_distance }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Lie After -->
+            <div class="col-md-6">
+                <label for="after_lie" class="form-label fw-bold">Lie after shot:</label>
+                <select class="form-select border-primary" id="after_lie" name="after_lie" required>
+                    <option value="Tee" {% if after_lie == 'Tee' %}selected{% endif %}>Tee</option>
+                    <option value="Fairway" {% if after_lie == 'Fairway' %}selected{% endif %}>Fairway</option>
+                    <option value="Rough" {% if after_lie == 'Rough' %}selected{% endif %}>Rough</option>
+                    <option value="Bunker" {% if after_lie == 'Bunker' %}selected{% endif %}>Bunker</option>
+                    <option value="Recovery" {% if after_lie == 'Recovery' %}selected{% endif %}>Recovery</option>
+                    <option value="Green" {% if after_lie == 'Green' %}selected{% endif %}>Green</option>
+                    <option value="In the Hole" {% if after_lie == 'In the Hole' %}selected{% endif %}>In the Hole</option>
+                </select>
+            </div>
+
+            <!-- Distance After -->
+            <div class="col-md-6">
+                <label for="after_distance" class="form-label fw-bold" id="after-distance-label">Distance to hole after shot ({{ 'Metres' if unit == 'metres' else 'Yards' }})</label>
+                <input type="number" step="any" class="form-control border-primary" id="after_distance" name="after_distance" 
+                       value="{{ after_distance if after_distance is not none else '' }}" required>
+                {% if errors.after_distance %}
+                <div class="text-danger">{{ errors.after_distance }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Penalty Section -->
+            <div class="col-12">
+                <label class="form-check-label fw-bold">
+                    <input type="checkbox" id="penalty" name="penalty" value="1" class="form-check-input" {% if penalty %}checked{% endif %}> Penalty incurred
+                </label>
+            </div>
+
+            <div class="col-12 ms-4" id="penalty-options" style="display: none;">
+                <label class="form-check-label">
+                    <input type="checkbox" id="oob" name="oob" value="1" class="form-check-input" {% if oob %}checked{% endif %}> OOB / Lost Ball
+                </label>
+                <label class="form-check-label ms-4">
+                    <input type="checkbox" id="hazard" name="hazard" value="1" class="form-check-input" {% if hazard %}checked{% endif %}> Hazard / Unplayable
+                </label>
+            </div>
+
+            <!-- Buttons and Unit Toggle -->
+<div class="col-12 d-flex justify-content-between align-items-center">
+    <div class="d-flex gap-3">
+        <button type="submit" class="btn btn-primary px-4">Calculate</button>
+        <button type="button" id="clear-button" class="btn btn-outline-secondary px-4">Clear</button>
+    </div>
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="unit-toggle" name="unit" value="metres" {% if unit == 'metres' %}checked{% endif %}>
+        <label class="form-check-label" for="unit-toggle" id="unit-label">Yards | Metres</label>
+    </div>
+</div>
+        </form>
+    </div>
+</div>
+
+{% if sg is not none %}
+<div class="alert mt-4 text-center shadow-lg rounded p-4" style="background-color: {{ sg_color }}; color: white; max-width: 400px; margin: 0 auto;">
+    <h4 class="m-0 fw-bold">
+        Your calculated strokes gained: <strong>{{ "+" if sg > 0 else "" }}{{ sg }}</strong>
+    </h4>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('static', filename='js/penalty_toggle.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sg_calc.js') }}"></script>
+{% endblock %}
+
+
+

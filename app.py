@@ -39,6 +39,11 @@ login_manager.login_view = 'login'  # Redirect users to the login page if not lo
 def load_user(userID):
     return User.query.get(int(userID))
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
 # Route for user signup
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -1513,8 +1518,8 @@ def get_tees(course_id):
     return jsonify([{"teeID": tee.teeID, "name": tee.name} for tee in tees])
 
 
-@app.route('/', methods=['GET', 'POST'])
-def home():
+@app.route('/sg_calculator', methods=['GET', 'POST'])
+def sg_calculator():
     sg = None
     sg_color = None
     errors = {}
@@ -1614,7 +1619,7 @@ def home():
                 # Neutral value (sg = 0)
                 sg_color = "rgb(128, 128, 128)"  # Dark grey
 
-    return render_template('index.html', sg=sg, sg_color=sg_color, errors=errors, 
+    return render_template('sg_calc.html', sg=sg, sg_color=sg_color, errors=errors, 
                            before_distance=before_distance, before_lie=before_lie,
                            after_distance=after_distance, after_lie=after_lie,
                            penalty=penalty, oob=oob, hazard=hazard, unit=unit)

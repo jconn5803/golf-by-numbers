@@ -1,105 +1,172 @@
 {% extends "base.html" %}
 
-{% block title %}Strokes Gained Calculator{% endblock %}
+{% block title %}
+Home - UnderParData
+{% endblock %}
+
+{% block extra_css %}
+<!-- Page-specific CSS -->
+<style>
+  /* Hero Section Styles */
+  .hero {
+    position: relative;
+    min-height: 70vh;
+    background: url('{{ url_for("static", filename="hero-bg.jpg") }}') center center / cover no-repeat;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+  }
+  .hero.fade-in {
+    opacity: 1;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 0;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Example of a subtle hover effect for cards */
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="card border-primary shadow-lg rounded p-4">
-    <div class="card-body">
-        <h1 class="text-center text-primary mb-4">Strokes Gained Calculator</h1>
-        <form id="calculator-form" action="/" method="POST" class="row g-4">
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-content animate__animated animate__fadeInDown">
+    <h1 class="display-3 fw-bold mb-3">UnderParData</h1>
+    <p class="lead mb-4">Elevate Your Golf Game with Data-Driven Insights</p>
+    <a href="/join" class="btn btn-primary btn-lg">Get Started</a>
+  </div>
+</section>
 
-            <!-- Lie Before -->
-            <div class="col-md-6">
-                <label for="before_lie" class="form-label fw-bold">Lie before shot:</label>
-                <select class="form-select border-primary" id="before_lie" name="before_lie" required>
-                    <option value="Tee" {% if before_lie == 'Tee' %}selected{% endif %}>Tee</option>
-                    <option value="Fairway" {% if before_lie == 'Fairway' %}selected{% endif %}>Fairway</option>
-                    <option value="Rough" {% if before_lie == 'Rough' %}selected{% endif %}>Rough</option>
-                    <option value="Bunker" {% if before_lie == 'Bunker' %}selected{% endif %}>Bunker</option>
-                    <option value="Recovery" {% if before_lie == 'Recovery' %}selected{% endif %}>Recovery</option>
-                    <option value="Green" {% if before_lie == 'Green' %}selected{% endif %}>Green</option>
-                </select>
-            </div>
-
-            <!-- Distance Before -->
-            <div class="col-md-6">
-                <label for="before_distance" class="form-label fw-bold" id="before-distance-label">Distance to hole before shot ({{ 'Metres' if unit == 'metres' else 'Yards' }})</label>
-                <input type="number" step="any" class="form-control border-primary" id="before_distance" name="before_distance" 
-                       value="{{ before_distance if before_distance is not none else '' }}" required>
-                {% if errors.before_distance %}
-                <div class="text-danger">{{ errors.before_distance }}</div>
-                {% endif %}
-            </div>
-
-            <!-- Lie After -->
-            <div class="col-md-6">
-                <label for="after_lie" class="form-label fw-bold">Lie after shot:</label>
-                <select class="form-select border-primary" id="after_lie" name="after_lie" required>
-                    <option value="Tee" {% if after_lie == 'Tee' %}selected{% endif %}>Tee</option>
-                    <option value="Fairway" {% if after_lie == 'Fairway' %}selected{% endif %}>Fairway</option>
-                    <option value="Rough" {% if after_lie == 'Rough' %}selected{% endif %}>Rough</option>
-                    <option value="Bunker" {% if after_lie == 'Bunker' %}selected{% endif %}>Bunker</option>
-                    <option value="Recovery" {% if after_lie == 'Recovery' %}selected{% endif %}>Recovery</option>
-                    <option value="Green" {% if after_lie == 'Green' %}selected{% endif %}>Green</option>
-                    <option value="In the Hole" {% if after_lie == 'In the Hole' %}selected{% endif %}>In the Hole</option>
-                </select>
-            </div>
-
-            <!-- Distance After -->
-            <div class="col-md-6">
-                <label for="after_distance" class="form-label fw-bold" id="after-distance-label">Distance to hole after shot ({{ 'Metres' if unit == 'metres' else 'Yards' }})</label>
-                <input type="number" step="any" class="form-control border-primary" id="after_distance" name="after_distance" 
-                       value="{{ after_distance if after_distance is not none else '' }}" required>
-                {% if errors.after_distance %}
-                <div class="text-danger">{{ errors.after_distance }}</div>
-                {% endif %}
-            </div>
-
-            <!-- Penalty Section -->
-            <div class="col-12">
-                <label class="form-check-label fw-bold">
-                    <input type="checkbox" id="penalty" name="penalty" value="1" class="form-check-input" {% if penalty %}checked{% endif %}> Penalty incurred
-                </label>
-            </div>
-
-            <div class="col-12 ms-4" id="penalty-options" style="display: none;">
-                <label class="form-check-label">
-                    <input type="checkbox" id="oob" name="oob" value="1" class="form-check-input" {% if oob %}checked{% endif %}> OOB / Lost Ball
-                </label>
-                <label class="form-check-label ms-4">
-                    <input type="checkbox" id="hazard" name="hazard" value="1" class="form-check-input" {% if hazard %}checked{% endif %}> Hazard / Unplayable
-                </label>
-            </div>
-
-            <!-- Buttons and Unit Toggle -->
-<div class="col-12 d-flex justify-content-between align-items-center">
-    <div class="d-flex gap-3">
-        <button type="submit" class="btn btn-primary px-4">Calculate</button>
-        <button type="button" id="clear-button" class="btn btn-outline-secondary px-4">Clear</button>
+<!-- MAIN CONTENT SECTION START -->
+<div class="container my-5">
+  <!-- Introduction Row -->
+  <div class="row align-items-center">
+    <div class="col-md-6">
+      <h2 class="mb-4 fw-bold">Take Your Golf Game to the Next Level</h2>
+      <p class="lead">
+        Track your rounds, analyze your performance, and pinpoint areas of improvement 
+        using real data. Our platform helps you gain insights into your strengths and 
+        weaknesses so you can consistently play under par.
+      </p>
+      <a href="/join" class="btn btn-primary btn-lg mt-3">Sign Up Now</a>
+      <a href="/about" class="btn btn-outline-primary btn-lg mt-3 ms-2">Learn More</a>
     </div>
-    <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" id="unit-toggle" name="unit" value="metres" {% if unit == 'metres' %}checked{% endif %}>
-        <label class="form-check-label" for="unit-toggle" id="unit-label">Yards | Metres</label>
+    <div class="col-md-6 text-center">
+      <!-- Example placeholder image. Replace with your own. -->
+      <img 
+        src="https://via.placeholder.com/500x300.png?text=Golf+Data+Visualization" 
+        class="img-fluid rounded shadow" 
+        alt="Golf Data Visualization"
+      />
     </div>
-</div>
-        </form>
-    </div>
+  </div>
 </div>
 
-{% if sg is not none %}
-<div class="alert mt-4 text-center shadow-lg rounded p-4" style="background-color: {{ sg_color }}; color: white; max-width: 400px; margin: 0 auto;">
-    <h4 class="m-0 fw-bold">
-        Your calculated strokes gained: <strong>{{ "+" if sg > 0 else "" }}{{ sg }}</strong>
-    </h4>
+<!-- Features / Benefits Section -->
+<div class="container my-5">
+  <h3 class="text-center fw-bold mb-4">Why Join UnderParData?</h3>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <!-- Example icon (Bootstrap icon). You can replace with FontAwesome or an image. -->
+            <svg class="bi bi-bar-chart-fill text-primary" width="40" height="40" fill="currentColor"
+                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+              <path d="M1 14V0h1v14H1zm4-5h1v5H5V9zm3-3h1v8H8V6zm3-4h1v12h-1V2z"/>
+            </svg>
+          </div>
+          <h5 class="card-title fw-bold">Track Key Stats</h5>
+          <p class="card-text">
+            Store your driving distance, fairway accuracy, greens in regulation,
+            putting average, and more—get the data you need to make informed decisions.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <svg class="bi bi-lightning-fill text-primary" width="40" height="40" fill="currentColor"
+                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+              <path d="M11.3 1a.5.5 0 0 1 .476.647L10.057 6H13a.5.5 0 0 1 .354.854l-9 9a.5.5 0 0 1-.81-.59L5.943 10H3a.5.5 0 0 1-.354-.854l8-8A.5.5 0 0 1 11.3 1z"/>
+            </svg>
+          </div>
+          <h5 class="card-title fw-bold">Quick & Easy Updates</h5>
+          <p class="card-text">
+            Updating your round details is fast and intuitive. Enter stats on the go 
+            or at home, and let our system handle the number-crunching.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="mb-3">
+            <svg class="bi bi-arrow-up-right-circle-fill text-primary" width="40" height="40" 
+                 fill="currentColor" xmlns="http://www.w3.org/2000/svg" 
+                 viewBox="0 0 16 16">
+              <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm3.547 5.164a.5.5 0 0 0-.82-.385l-2.482 2.48-1.11-1.112a.5.5 0 0 0-.708.708l1.112 1.11-2.48 2.482a.5.5 0 0 0 .385.82h5a.5.5 0 0 0 .5-.5v-5z"/>
+            </svg>
+          </div>
+          <h5 class="card-title fw-bold">Actionable Insights</h5>
+          <p class="card-text">
+            Discover where you leave strokes on the course. Our analytics pinpoint 
+            exactly what to focus on to lower your scores.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-{% endif %}
 
+<!-- Call to Action Section -->
+<div class="py-5 bg-light">
+  <div class="container text-center">
+    <h4 class="fw-bold mb-3">Ready to See Your Game Improve?</h4>
+    <p class="mb-4">
+      Sign up today and start logging your rounds for immediate feedback.
+    </p>
+    <a href="/join" class="btn btn-primary btn-lg">Join Now</a>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{{ url_for('static', filename='js/penalty_toggle.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/sg_calc.js') }}"></script>
+<!-- Page-specific JavaScript -->
+<script>
+  console.log("Home page loaded!");
+  
+  document.addEventListener('DOMContentLoaded', function(){
+      const hero = document.querySelector('.hero');
+      if (hero) {
+          setTimeout(() => {
+              hero.classList.add('fade-in');
+          }, 200);
+      }
+  });
+</script>
 {% endblock %}
-
-
-
