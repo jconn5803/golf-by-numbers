@@ -12,6 +12,13 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(128), nullable = False)
     last_name = db.Column(db.String(128), nullable = False)
 
+    # Subscription plan
+    stripe_customer_id = db.Column(db.String(120), nullable=True)
+    subscription_active = db.Column(db.Boolean, default=False)
+    subscription_plan = db.Column(db.String(50), nullable=True)
+
+
+
     # One-to-many relationship with rounds
     rounds = relationship("Round", back_populates="user")
 
