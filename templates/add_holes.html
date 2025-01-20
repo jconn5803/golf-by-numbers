@@ -2,6 +2,11 @@
 
 {% block title %}Add Holes{% endblock %}
 
+{% block extra_css %}
+  <!-- If you have page-specific CSS, include it here -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/add_holes.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
     <h2 class="text-center">Add Holes for Tee: {{ tee.name }}</h2>
@@ -21,9 +26,9 @@
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>Hole Number</th>
-                    <th>Distance (yards)</th>
-                    <th>Par</th>
+                    <th class="hole-number-col">Hole Number</th>
+                    <th class="distance-col">Distance (yards)</th>
+                    <th class="par-number-col">Par</th>
                 </tr>
             </thead>
             <tbody id="holes_table">
@@ -37,10 +42,6 @@
         </div>
     </form>
 </div>
-
-<script>
-    
-</script>
 {% endblock %}
 
 {% block extra_js %}

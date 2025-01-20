@@ -81,7 +81,7 @@
                     name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
                     id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
                     value="1"
-                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB')"
+                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB', ${par})"
                 >
                 <label 
                     class="form-check-label" 
@@ -97,7 +97,7 @@
                     name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
                     id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
                     value="1"
-                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard')"
+                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard', ${par})"
                 >
                 <label 
                     class="form-check-label" 
@@ -289,7 +289,7 @@ document.addEventListener('click', function(event) {
 /********************************************
  *    4) ADD DUMMY SHOT FOR PENALTIES
  ********************************************/
-function addDummyShot(holeNumber, shotNumber, penaltyType) {
+function addDummyShot(holeNumber, shotNumber, penaltyType, par) {
     const dummyShotId = `hole_dummy_${holeNumber}_shot_${shotNumber}_dummy_${penaltyType.toLowerCase()}`;
     const nextShotId = `hole_${holeNumber}_shot_${shotNumber + 1}`;
     const existingDummyShot = document.getElementById(dummyShotId);
@@ -303,43 +303,81 @@ function addDummyShot(holeNumber, shotNumber, penaltyType) {
         `hole_${holeNumber}_shot_${shotNumber}_${penaltyType === "OOB" ? "out_of_bounds" : "hazard"}`
     );
 
-    const lrSelectorId = `hole_${holeNumber}_shot_${shotNumber}_miss_direction`;
-    const existingLrSelector = document.getElementById(lrSelectorId);
+    // ID for a potential miss-direction element
+    const directionSelectorId = `hole_${holeNumber}_shot_${shotNumber}_miss_direction`;
+    const existingDirectionSelector = document.getElementById(directionSelectorId);
 
-    // If the checkbox is checked and lrSelector does not already exist and current lie is "Tee"
-    if (penaltyCheckbox.checked && !existingLrSelector && currentLie === "Tee") {
-        const currentShotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
-        // Add the lrSelector
-        const lrSelectorHTML = `
-            <div class="mb-3" id="${lrSelectorId}">
-                <label class="form-label">Miss Direction:</label>
-                <div class="btn-group" role="group">
+    // If the checkbox is checked, there's no existing direction UI, current lie is "Tee", and par == 3 => show compass
+    // Else if par != 3 => show L/R
+    if (
+        penaltyCheckbox.checked && 
+        !existingDirectionSelector && 
+        currentLie === "Tee"
+      ) {
+          const currentShotElement = document.getElementById(
+            `hole_${holeNumber}_shot_${shotNumber}`
+          );
+  
+          let directionSelectorHTML = "";
+  
+          if (par === 3) {
+              // Show compass if it's a par-3
+              directionSelectorHTML = `
+                <div class="mb-3" id="${directionSelectorId}">
+                    <label class="form-label">Miss Direction:</label>
+                    <div class="compass-container">
+                        <div class="compass-buttons">
+                            <button type="button" class="compass-btn" data-direction="Long">Long</button>
+                            <button type="button" class="compass-btn" data-direction="Long Right">Long Right</button>
+                            <button type="button" class="compass-btn" data-direction="Right">Right</button>
+                            <button type="button" class="compass-btn" data-direction="Short Right">Short Right</button>
+                            <button type="button" class="compass-btn" data-direction="Short">Short</button>
+                            <button type="button" class="compass-btn" data-direction="Short Left">Short Left</button>
+                            <button type="button" class="compass-btn" data-direction="Left">Left</button>
+                            <button type="button" class="compass-btn" data-direction="Long Left">Long Left</button>
+                        </div>
+                    </div>
                     <input 
-                        type="radio" 
-                        class="btn-check" 
+                        type="hidden" 
                         name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
-                        id="hole_${holeNumber}_shot_${shotNumber}_left" 
-                        value="Left" 
+                        id="${directionSelectorId}_input" 
                         required
                     >
-                    <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber}_left">L</label>
-
-                    <input 
-                        type="radio" 
-                        class="btn-check" 
-                        name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
-                        id="hole_${holeNumber}_shot_${shotNumber}_right" 
-                        value="Right" 
-                        required
-                    >
-                    <label class="btn btn-outline-secondary" for="hole_${holeNumber}_shot_${shotNumber}_right">R</label>
                 </div>
-            </div>
-        `;
-        currentShotElement.insertAdjacentHTML("beforeend", lrSelectorHTML);
+              `;
+          } else {
+              // Default to left/right if par != 3
+              directionSelectorHTML = `
+                <div class="mb-3" id="${directionSelectorId}">
+                    <label class="form-label">Miss Direction:</label>
+                    <div class="btn-group" role="group">
+                        <input 
+                            type="radio" 
+                            class="btn-check" 
+                            name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
+                            id="${directionSelectorId}_left" 
+                            value="Left" 
+                            required
+                        >
+                        <label class="btn btn-outline-secondary" for="${directionSelectorId}_left">L</label>
+  
+                        <input 
+                            type="radio" 
+                            class="btn-check" 
+                            name="hole_${holeNumber}_shot_${shotNumber}_miss_direction" 
+                            id="${directionSelectorId}_right" 
+                            value="Right" 
+                            required
+                        >
+                        <label class="btn btn-outline-secondary" for="${directionSelectorId}_right">R</label>
+                    </div>
+                </div>
+              `;
+          }
+        currentShotElement.insertAdjacentHTML("beforeend", directionSelectorHTML);
     }
     // If the checkbox is unchecked and lrSelector exists, remove it
-    else if (!penaltyCheckbox.checked && existingLrSelector) {
+    else if (!penaltyCheckbox.checked && existingDirectionSelector) {
         existingLrSelector.remove();
     }
 
@@ -416,7 +454,7 @@ function addDummyShot(holeNumber, shotNumber, penaltyType) {
                         name="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
                         id="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
                         value="1"
-                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'OOB')"
+                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'OOB', ${par})"
                     >
                     <label for="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" class="form-check-label">Out of Bounds</label>
                 </div>
@@ -427,7 +465,7 @@ function addDummyShot(holeNumber, shotNumber, penaltyType) {
                         name="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
                         id="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
                         value="1"
-                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'hazard')"
+                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'hazard', ${par})"
                     >
                     <label for="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" class="form-check-label">Hazard/Unplayable</label>
                 </div>
@@ -491,15 +529,39 @@ function getNextShotNumber(holeNumber) {
 function updateRemoveShotButtons(holeNumber) {
     const shotsContainer = document.getElementById(`hole_${holeNumber}_shots`);
     const shotCards = shotsContainer.querySelectorAll(".shot-card");
-    shotCards.forEach((card, index) => {
-        const removeBtn = card.querySelector(".remove-shot-btn");
-        if (!removeBtn) return;  // safety check
 
-        // Show remove button only on the last shot
+    shotCards.forEach((card, index) => {
+        // Grab the removeShot button on this card
+        const removeBtn = card.querySelector(".remove-shot-btn");
+
+        // Grab all form controls (inputs, selects, checkboxes, etc.)
+        // excluding the remove-shot button if you want to handle it separately
+        const formElements = card.querySelectorAll(`
+            input[type="number"],
+            input[type="checkbox"],
+            select
+        `);
+
         if (index === shotCards.length - 1) {
-            removeBtn.style.display = "inline-block";
+            // This is the last (newest) shot card
+            // -> ENABLE all form controls
+            formElements.forEach(el => el.disabled = false);
+
+            // Show remove button
+            if (removeBtn) {
+                removeBtn.style.display = "inline-block";
+                removeBtn.disabled = false;
+            }
         } else {
-            removeBtn.style.display = "none";
+            // This is NOT the last shot card
+            // -> DISABLE all form controls
+            formElements.forEach(el => el.disabled = true);
+
+            // Hide remove button (or disable it)
+            if (removeBtn) {
+                removeBtn.style.display = "none";
+                // Alternatively: removeBtn.disabled = true;
+            }
         }
     });
 }

@@ -58,7 +58,7 @@
                                 name="hole_{{ hole.number }}_shot_1_out_of_bounds" 
                                 id="hole_{{ hole.number }}_shot_1_out_of_bounds" 
                                 value="1"
-                                onchange="addDummyShot({{ hole.number }}, 1, 'OOB')"
+                                onchange="addDummyShot({{ hole.number }}, 1, 'OOB', {{hole.par}})"
                             >
                             <label for="hole_{{ hole.number }}_shot_1_out_of_bounds" class="form-check-label">Out of Bounds</label>
                         </div>
@@ -70,7 +70,7 @@
                                 name="hole_{{ hole.number }}_shot_1_hazard" 
                                 id="hole_{{ hole.number }}_shot_1_hazard" 
                                 value="1"
-                                onchange="addDummyShot({{ hole.number }}, 1, 'hazard')"
+                                onchange="addDummyShot({{ hole.number }}, 1, 'hazard', {{hole.par}})"
                             >
                             <label for="hole_{{ hole.number }}_shot_1_hazard" class="form-check-label">Hazard/Unplayable</label>
                         </div>
