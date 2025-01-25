@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, flash
 from models.sg_model import SG_calculator, shot_type_func  # Import your SG calculator model
 from models.unit_converter import metres_to_yards, metres_to_feet
 from models.gir_fw_tracking import update_gir_fairway
+from functools import wraps
 
 # Import database modules
 from config import Config
@@ -46,6 +47,21 @@ login_manager.login_view = 'login'  # Redirect users to the login page if not lo
 def load_user(userID):
     return User.query.get(int(userID))
 
+def subscription_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Must be logged in and have an active subscription
+        if not current_user.is_authenticated:
+            flash("You must be logged in to access this page.")
+            return redirect(url_for("login"))
+
+        if not current_user.subscription_active:
+            flash("You must be subscribed to access this page.")
+            return redirect(url_for("subscribe_page"))
+
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Configure Stripe with secret key from environment variable
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
@@ -83,7 +99,6 @@ def create_checkout_session():
     
 
 @app.route('/subscribe')
-@login_required
 def subscribe_page():
     stripe_publishable_key = os.getenv("STRIPE_PUBLISHABLE_KEY")
     return render_template('subscribe.html', stripe_publishable_key=stripe_publishable_key)
@@ -199,7 +214,7 @@ def login():
 
         # Log the user in
         login_user(user)
-        return "Logged in successfully!", 200
+        return redirect('/')
 
     return render_template('login.html')
 
@@ -208,11 +223,13 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return "Logged out successfully!", 200
+    return redirect('/')
+    
 
 
 # Add a route to display a list of courses in the database
 @app.route('/courses')
+@subscription_required
 def view_courses():
     courses = Course.query.all()
     return render_template('courses.html', courses=courses)
@@ -220,6 +237,7 @@ def view_courses():
 # Add a route to add a course
 @app.route('/add_course', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_course():
     if request.method == 'POST':
         course_name = request.form.get('name')
@@ -229,13 +247,14 @@ def add_course():
         db.session.add(new_course)
         db.session.commit()
 
-        return redirect('/courses')
+        return redirect(url_for('add_tee', course_id=new_course.courseID))
 
     return render_template('add_course.html')
 
 # Add a route to populate tees and holes 
 @app.route('/add_tee/<int:course_id>', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_tee(course_id):
     course = Course.query.get_or_404(course_id)
 
@@ -255,6 +274,7 @@ def add_tee(course_id):
 # Add a route to add in the holes
 @app.route('/add_holes/<int:tee_id>', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_holes(tee_id):
     tee = Tee.query.get_or_404(tee_id)
     if request.method == 'POST':
@@ -285,6 +305,7 @@ from datetime import datetime
 
 @app.route('/add_round', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_round():
     if request.method == 'POST':
         # Retrieve form data
@@ -326,6 +347,7 @@ from flask import jsonify
 # Add a route to put the shots in
 @app.route('/add_shots/<int:roundID>', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_shots(roundID):
     round_data = Round.query.get_or_404(roundID)
     course = Course.query.get_or_404(round_data.course_id)
@@ -464,6 +486,7 @@ def add_shots(roundID):
 
 @app.route('/dashboard')
 @login_required
+@subscription_required
 def dashboard():
     """
     Renders the main dashboard page with filters and placeholder for charts/cards.
@@ -1000,7 +1023,7 @@ def approach_table():
     shots_query = (db.session.query(Shot)
                    .join(Round, Shot.roundID == Round.roundID)
                    .filter(Round.userID == current_user.userID,
-                           Shot.shot_type == "Approach"))
+                           Shot.shot_type == "Approach", Shot.lie_before != "Recovery"))
 
     # Apply filters
     if course_id:
@@ -1611,6 +1634,7 @@ def distance_histogram():
 
 
 @app.route('/get_tees/<int:course_id>')
+@subscription_required
 def get_tees(course_id):
     """
     Fetches the tees associated with a specific course.
@@ -1620,7 +1644,7 @@ def get_tees(course_id):
     return jsonify([{"teeID": tee.teeID, "name": tee.name} for tee in tees])
 
 
-@app.route('/sg_calculator', methods=['GET', 'POST'])
+@app.route('/sg_calc', methods=['GET', 'POST'])
 def sg_calculator():
     sg = None
     sg_color = None

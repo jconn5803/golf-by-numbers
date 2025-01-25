@@ -4,169 +4,27 @@
 Home - UnderParData
 {% endblock %}
 
-{% block extra_css %}
-<!-- Page-specific CSS -->
-<style>
-  /* Hero Section Styles */
-  .hero {
-    position: relative;
-    min-height: 70vh;
-    background: url('{{ url_for("static", filename="hero-bg.jpg") }}') center center / cover no-repeat;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 2rem;
-    opacity: 0;
-    transition: opacity 1.5s ease-in-out;
-  }
-  .hero.fade-in {
-    opacity: 1;
-  }
-  .hero::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 0;
-  }
-  .hero-content {
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Example of a subtle hover effect for cards */
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<!-- Hero Section -->
-<section class="hero">
-  <div class="hero-content animate__animated animate__fadeInDown">
-    <h1 class="display-3 fw-bold mb-3">UnderParData</h1>
-    <p class="lead mb-4">Elevate Your Golf Game with Data-Driven Insights</p>
-    <a href="/join" class="btn btn-primary btn-lg">Get Started</a>
-  </div>
-</section>
-
-<!-- MAIN CONTENT SECTION START -->
-<div class="container my-5">
-  <!-- Introduction Row -->
-  <div class="row align-items-center">
-    <div class="col-md-6">
-      <h2 class="mb-4 fw-bold">Take Your Golf Game to the Next Level</h2>
-      <p class="lead">
-        Track your rounds, analyze your performance, and pinpoint areas of improvement 
-        using real data. Our platform helps you gain insights into your strengths and 
-        weaknesses so you can consistently play under par.
-      </p>
-      <a href="/join" class="btn btn-primary btn-lg mt-3">Sign Up Now</a>
-      <a href="/about" class="btn btn-outline-primary btn-lg mt-3 ms-2">Learn More</a>
-    </div>
-    <div class="col-md-6 text-center">
-      <!-- Example placeholder image. Replace with your own. -->
-      <img 
-        src="https://via.placeholder.com/500x300.png?text=Golf+Data+Visualization" 
-        class="img-fluid rounded shadow" 
-        alt="Golf Data Visualization"
-      />
-    </div>
-  </div>
-</div>
-
-<!-- Features / Benefits Section -->
-<div class="container my-5">
-  <h3 class="text-center fw-bold mb-4">Why Join UnderParData?</h3>
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <!-- Example icon (Bootstrap icon). You can replace with FontAwesome or an image. -->
-            <svg class="bi bi-bar-chart-fill text-primary" width="40" height="40" fill="currentColor"
-                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-              <path d="M1 14V0h1v14H1zm4-5h1v5H5V9zm3-3h1v8H8V6zm3-4h1v12h-1V2z"/>
-            </svg>
-          </div>
-          <h5 class="card-title fw-bold">Track Key Stats</h5>
-          <p class="card-text">
-            Store your driving distance, fairway accuracy, greens in regulation,
-            putting average, and more—get the data you need to make informed decisions.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <svg class="bi bi-lightning-fill text-primary" width="40" height="40" fill="currentColor"
-                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-              <path d="M11.3 1a.5.5 0 0 1 .476.647L10.057 6H13a.5.5 0 0 1 .354.854l-9 9a.5.5 0 0 1-.81-.59L5.943 10H3a.5.5 0 0 1-.354-.854l8-8A.5.5 0 0 1 11.3 1z"/>
-            </svg>
-          </div>
-          <h5 class="card-title fw-bold">Quick & Easy Updates</h5>
-          <p class="card-text">
-            Updating your round details is fast and intuitive. Enter stats on the go 
-            or at home, and let our system handle the number-crunching.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body text-center">
-          <div class="mb-3">
-            <svg class="bi bi-arrow-up-right-circle-fill text-primary" width="40" height="40" 
-                 fill="currentColor" xmlns="http://www.w3.org/2000/svg" 
-                 viewBox="0 0 16 16">
-              <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm3.547 5.164a.5.5 0 0 0-.82-.385l-2.482 2.48-1.11-1.112a.5.5 0 0 0-.708.708l1.112 1.11-2.48 2.482a.5.5 0 0 0 .385.82h5a.5.5 0 0 0 .5-.5v-5z"/>
-            </svg>
-          </div>
-          <h5 class="card-title fw-bold">Actionable Insights</h5>
-          <p class="card-text">
-            Discover where you leave strokes on the course. Our analytics pinpoint 
-            exactly what to focus on to lower your scores.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Call to Action Section -->
-<div class="py-5 bg-light">
-  <div class="container text-center">
-    <h4 class="fw-bold mb-3">Ready to See Your Game Improve?</h4>
-    <p class="mb-4">
-      Sign up today and start logging your rounds for immediate feedback.
+<div class="container mt-5">
+  <!-- Light grey box with slight border radius -->
+  <div class="p-4 bg-light" style="border-radius: 8px; border: 1px solid #ccc;">
+    <h1 class="mb-4 text-center">Track Your Golf Stats with UnderParData</h1>
+    <p>
+      Golf is a game of precision, strategy, and continuous improvement. At UnderParData, we provide you
+      with easy-to-use tools to help you lower your handicap. Whether you're a weekend warrior or
+      aspiring tour pro, we've got the advanced analytics to help you get the most out of each round.
     </p>
-    <a href="/join" class="btn btn-primary btn-lg">Join Now</a>
+    <ul>
+      <li>Record detailed shot-by-shot data to identify where strokes are lost</li>
+      <li>Visualize your performance with strokes gained analytics</li>
+      <li>Compare your stats with friends or professional benchmarks</li>
+      <li>Track progress over time with interactive charts and graphs</li>
+    </ul>
+    <p>
+      Ready to take your game to the next level? <strong>Sign up now</strong> or
+      explore our powerful <a href="/sg_calc">Strokes Gained Calculator</a> to get an idea of how
+      your game stacks up.
+    </p>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<!-- Page-specific JavaScript -->
-<script>
-  console.log("Home page loaded!");
-  
-  document.addEventListener('DOMContentLoaded', function(){
-      const hero = document.querySelector('.hero');
-      if (hero) {
-          setTimeout(() => {
-              hero.classList.add('fade-in');
-          }, 200);
-      }
-  });
-</script>
 {% endblock %}

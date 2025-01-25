@@ -5,6 +5,38 @@
 {% endblock %}
 
 {% block content %}
+<!-- SECONDARY NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 shadow-sm">
+  <div class="container-fluid">
+    <div class="navbar-brand fw-semibold">Dashboard Options</div>
+    <button 
+      class="navbar-toggler" 
+      type="button" 
+      data-bs-toggle="collapse" 
+      data-bs-target="#secondNavbarContent" 
+      aria-controls="secondNavbarContent"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="secondNavbarContent">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('add_round') }}">Add Round</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('add_course') }}">Add Course</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('view_courses') }}">All Courses</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<!-- END SECONDARY NAVBAR -->
 <h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
 
 <!-- FILTER FORM -->

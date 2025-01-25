@@ -543,28 +543,22 @@ function updateRemoveShotButtons(holeNumber) {
         `);
 
         if (index === shotCards.length - 1) {
-            // This is the last (newest) shot card
-            // -> ENABLE all form controls
-            formElements.forEach(el => el.disabled = false);
-
-            // Show remove button
-            if (removeBtn) {
-                removeBtn.style.display = "inline-block";
-                removeBtn.disabled = false;
-            }
-        } else {
-            // This is NOT the last shot card
-            // -> DISABLE all form controls
-            formElements.forEach(el => el.disabled = true);
-
-            // Hide remove button (or disable it)
-            if (removeBtn) {
-                removeBtn.style.display = "none";
-                // Alternatively: removeBtn.disabled = true;
-            }
-        }
-    });
-}
+            // last shot, user can edit
+            formElements.forEach(el => {
+              el.removeAttribute('readonly');
+              el.disabled = false;
+            });
+            removeBtn.style.display = "inline-block";
+          } else {
+            // old shots, user cannot edit
+            formElements.forEach(el => {
+              el.setAttribute('readonly', true);
+              // do NOT set el.disabled = true
+            });
+            // Possibly also set <select disabled>, but then you must mirror it in a hidden field
+            // removeBtn.style.display = "none";
+        
+}})}
 
 function removeShot(holeNumber, shotNumber) {
     // 1) Identify the shot card to remove
