@@ -52,21 +52,11 @@
           <li class="nav-item">
             <a class="nav-link fw-semibold px-3" href="/sg_calc">Strokes Gained Calculator</a>
           </li>
-          {% if not current_user.is_authenticated %}
           <li class="nav-item">
-            <a class="nav-link fw-semibold px-3" href="/subscribe">Pricing</a>
+            <a class="nav-link fw-semibold px-3" href="/dashboard">Dashboard</a>
           </li>
-          {% endif %}
-          
-
-          <!-- Show Exclusive Content link only for logged-in users with active subscription -->
-          {% if current_user.is_authenticated and current_user.subscription_active %}
-            <li class="nav-item">
-              <a class="nav-link fw-semibold px-3" href="/dashboard">Dashboard</a>
-            </li>
-          {% endif %}
         </ul>
-  
+          
         <!-- RIGHT LINKS -->
         <ul class="navbar-nav ms-auto">
           {% if not current_user.is_authenticated %}
@@ -78,12 +68,6 @@
               <a class="nav-link fw-semibold px-3 register-link" href="/register">Register</a>
             </li>
           {% else %}
-            <!-- If the user is logged in but not subscribed -->
-            {% if not current_user.subscription_active %}
-              <li class="nav-item">
-                <a class="nav-link fw-semibold px-3" href="/subscribe">Subscribe</a>
-              </li>
-            {% endif %}
             <!-- Common link for all logged-in users -->
             <li class="nav-item">
               <a class="nav-link fw-semibold px-3" href="/logout">Log Out</a>

@@ -1,0 +1,41 @@
+#fairwayContainer {
+    position: relative;
+    width: 100%;
+    max-width: 500px;       /* You can make this wider or narrower as desired */
+    height: 500px;           /* Fairway "height" */
+    background-color: #2e7d32;    /* A medium-dark green for the background */
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 1em;
+    overflow: hidden;
+  }
+  
+  /* Common styles for each section */
+  #fairwayContainer > div {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;          /* For centering text */
+    align-items: center;    /* Vertically center the text */
+    justify-content: center;/* Horizontally center the text */
+    color: #fff;            /* White text */
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  
+  /* Left miss area (red tint) */
+  #leftMissSection {
+    background-color: rgba(255, 0, 0, 0.3);
+    left: 0;
+  }
+  
+  /* Center/fairway area (lighter overlay so green container shows through) */
+  #centerHitSection {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  /* Right miss area (red tint) */
+  #rightMissSection {
+    background-color: rgba(255, 0, 0, 0.3);
+  }
+  
