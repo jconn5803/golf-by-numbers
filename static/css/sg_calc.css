@@ -1,0 +1,69 @@
+/* ---------------------------------------------
+   Strokes Gained Calculator Form Styles
+--------------------------------------------- */
+
+/* Outer card wrapper */
+.sg-calculator-card {
+    border: 1px solid #ddd;        /* Light grey border to match a modern look */
+    background-color: #fff;        /* White background */
+    border-radius: 10px;           /* Rounded corners */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);  /* Soft shadow */
+    padding: 2rem;                 /* Spacing inside */
+    margin-top: 2rem;              /* Space above card */
+  }
+  
+  /* Section Title */
+  .sg-calculator-title {
+    color: #333;                   /* Dark text color */
+    font-weight: 700;             /* Bold heading */
+    font-size: 2rem;              /* Adjust heading size */
+    text-align: center;
+  }
+  
+  /* Labels */
+  .sg-form-label {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  /* Selects & Inputs */
+  .sg-form-select,
+  .sg-form-input {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.5rem;
+    transition: border-color 0.2s;
+  }
+  
+  .sg-form-select:focus,
+  .sg-form-input:focus {
+    outline: none;
+    border-color: #ffd85e;  /* A soft yellow highlight on focus */
+  }
+  
+  /* The “Calculate” button */
+  .btn-sg-calc {
+    background-color: #ffc107; /* Bright yellow from your hero CTA */
+    color: #000;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  
+  .btn-sg-calc:hover {
+    background-color: #e0a800; /* Slightly darker yellow */
+    color: #fff;
+  }
+  
+  /* Optional: style the final “alert” with your brand colors */
+  .sg-alert {
+    color: #fff;  /* White text on colored background */
+    border-radius: 10px;
+    max-width: 400px;
+    margin: 2rem auto 0 auto; 
+    padding: 1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+  
