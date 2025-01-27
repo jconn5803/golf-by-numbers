@@ -2,3 +2,4 @@ myenv
 *.db
 *.pyc
 .env
+*.jpg
