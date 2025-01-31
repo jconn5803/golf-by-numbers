@@ -20,8 +20,8 @@
 
 /* Register button black */
 .navbar-light .navbar-nav .nav-link.register-link {
-    background-color: black !important; /* or #000 */
-    color: white !important; 
+    background-color: #ffc107 !important; /* or #000 */
+    color: black !important; 
     padding: 0.5rem 1rem;
     border-radius: 10px;
     text-decoration: none;

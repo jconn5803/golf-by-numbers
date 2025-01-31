@@ -1,41 +1,203 @@
-#fairwayContainer {
+/************************************************
+  Main Wrapper 
+*************************************************/
+.dashboard-wrapper {
+    background-color: #fff; /* White or near-white to match your homepage */
+    padding: 1.5rem;       /* Some spacing around the content */
+    border-radius: 10px;   /* Slight rounding if you want a "card" look around everything */
+  }
+  
+  /************************************************
+    Secondary Navbar (top "Dashboard Options")
+  *************************************************/
+  .dashboard-secondary-nav {
+    background-color: #fdfdfd; /* Light background */
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    border: 1px solid #eee; /* Subtle border to separate from background */
+  }
+  
+  .dashboard-secondary-nav .navbar-brand {
+    font-size: 1.25rem;
+    color: #333;
+  }
+  
+  .dashboard-secondary-nav .nav-link {
+    color: #555 !important;  
+    margin: 0 0.5rem;
+    transition: color 0.2s;
+  }
+  
+  .dashboard-secondary-nav .nav-link:hover {
+    color: #000 !important;
+    text-decoration: none;
+  }
+  
+  /************************************************
+    Filter Form
+  *************************************************/
+  .dashboard-filter .form-label {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .dashboard-filter .form-control {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  
+  .dashboard-filter .form-control:focus {
+    outline: none;
+    border-color: #ffd85e; /* Accent color for focus */
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+  }
+  
+  /* CTA-style filter button */
+  .btn.btn-cta {
+    background-color: #ffc107;  /* The bright yellow from your homepage */
+    color: #000;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+  }
+  .btn.btn-cta:hover {
+    background-color: #e0a800; /* Slightly darker on hover */
+    color: #fff;
+  }
+  
+  /************************************************
+    Nav Tabs
+  *************************************************/
+  .dashboard-tabs {
+    border-bottom: 2px solid #ccc;
+  }
+  
+  .dashboard-tabs .nav-link {
+    border: none;
+    color: #555;
+    font-weight: 500;
+    border-radius: 0;
+    margin-right: 0.5rem;
+    transition: color 0.2s, background-color 0.2s;
+  }
+  
+  .dashboard-tabs .nav-link:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .dashboard-tabs .nav-link.active {
+    color: #000;
+    font-weight: 600;
+    border-bottom: 3px solid #ffc107; /* Accent color underline */
+    background-color: transparent;
+  }
+  
+  /************************************************
+    Tab Content
+  *************************************************/
+  .dashboard-tab-content {
+    margin-top: 1rem;
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Light, subtle shadow */
+  }
+  
+  /************************************************
+    Cards
+  *************************************************/
+  .card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  }
+  
+  .card .card-subtitle {
+    color: #999 !important;
+  }
+  
+  /************************************************
+    Fairway Container (Tee Tab)
+  *************************************************/
+  #fairwayContainer {
     position: relative;
     width: 100%;
-    max-width: 500px;       /* You can make this wider or narrower as desired */
-    height: 500px;           /* Fairway "height" */
-    background-color: #2e7d32;    /* A medium-dark green for the background */
+    max-width: 600px;       
+    height: 300px;          
+    background: linear-gradient(180deg, #3b945e 0%, #2e7d32 100%);
     border: 2px solid #ccc;
     border-radius: 6px;
     margin-bottom: 1em;
     overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  #fairwayContainer:hover {
+    box-shadow: 0 6px 10px rgba(0,0,0,0.15);
   }
   
-  /* Common styles for each section */
   #fairwayContainer > div {
     position: absolute;
     top: 0;
     height: 100%;
-    display: flex;          /* For centering text */
-    align-items: center;    /* Vertically center the text */
-    justify-content: center;/* Horizontally center the text */
-    color: #fff;            /* White text */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
     font-weight: bold;
     font-size: 0.9rem;
+    transition: background-color 0.2s;
   }
   
-  /* Left miss area (red tint) */
+  /* Left miss (red tint) */
   #leftMissSection {
-    background-color: rgba(255, 0, 0, 0.3);
+    background-color: rgba(255, 0, 0, 0.25);
     left: 0;
   }
-  
-  /* Center/fairway area (lighter overlay so green container shows through) */
-  #centerHitSection {
-    background-color: rgba(255, 255, 255, 0.2);
+  #leftMissSection:hover {
+    background-color: rgba(255, 0, 0, 0.4);
   }
   
-  /* Right miss area (red tint) */
+  /* Center/fairway (white tint) */
+  #centerHitSection {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+  #centerHitSection:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+  
+  /* Right miss (red tint) */
   #rightMissSection {
-    background-color: rgba(255, 0, 0, 0.3);
+    background-color: rgba(255, 0, 0, 0.25);
+  }
+  #rightMissSection:hover {
+    background-color: rgba(255, 0, 0, 0.4);
+  }
+  
+  /************************************************
+    D3 Tooltip
+  *************************************************/
+  .d3-tooltip {
+    background-color: rgba(0,0,0,0.7) !important;
+    color: #fff !important;
+    padding: 0.5rem !important;
+    border-radius: 4px !important;
+    font-size: 0.85rem !important;
+    pointer-events: none;
+  }
+  
+  /************************************************
+    Chart Headings 
+  *************************************************/
+  h5 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #333;
   }
   
