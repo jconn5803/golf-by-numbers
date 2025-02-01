@@ -34,87 +34,95 @@
 
     // Build the HTML string for the new shot
     const newShotHTML = `
-        <div class="shot-card" id="hole_${holeNumber}_shot_${newShotNum}">
-            <h5>Shot #${newShotNumber}</h5>
-            <div class="mb-3">
-                <label 
-                    for="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                    class="form-label"
-                >
-                    ${distanceLabel}
-                </label>
-                <input 
-                    type="number" 
-                    class="form-control" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_distance" 
-                    required
-                >
-            </div>
-            <div class="mb-3">
-                <label 
-                    for="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                    class="form-label"
-                >
-                    Lie:
-                </label>
-                <select 
-                    class="form-select" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_lie" 
-                    required 
-                    onchange="updateDistanceLabel(${holeNumber}, ${newShotNum}); 
-                            updateMissDirection(${holeNumber}, ${newShotNum}, ${par});"
-                >
-                    <option value="Tee"      ${preselectedLie === 'Tee'     ? 'selected' : ''}>Tee</option>
-                    <option value="Fairway"  ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
-                    <option value="Rough"    ${preselectedLie === 'Rough'   ? 'selected' : ''}>Rough</option>
-                    <option value="Bunker"   ${preselectedLie === 'Bunker'  ? 'selected' : ''}>Bunker</option>
-                    <option value="Recovery" ${preselectedLie === 'Recovery'? 'selected' : ''}>Recovery</option>
-                    <option value="Green"    ${preselectedLie === 'Green'   ? 'selected' : ''}>Green</option>
-                </select>
-            </div>
-            <div class="form-check form-check-inline">
-                <input 
-                    type="checkbox" 
-                    class="form-check-input" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
-                    value="1"
-                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB', ${par})"
-                >
-                <label 
-                    class="form-check-label" 
-                    for="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds"
-                >
-                    Out of Bounds
-                </label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input 
-                    type="checkbox" 
-                    class="form-check-input" 
-                    name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
-                    id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
-                    value="1"
-                    onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard', ${par})"
-                >
-                <label 
-                    class="form-check-label" 
-                    for="hole_${holeNumber}_shot_${newShotNum}_hazard"
-                >
-                    Hazard/Unplayable
-                </label>
-            </div>
-            <button 
-                type="button" 
-                class="btn btn-danger btn-sm remove-shot-btn" 
-                onclick="removeShot(${holeNumber}, ${newShotNum})"
-            >
-                Remove Shot
-            </button>
-        </div>
-    `;
+  <div class="shot-card mb-3" id="hole_${holeNumber}_shot_${newShotNum}">
+    <h5 class="shot-title">Shot #${newShotNumber}</h5>
+
+    <div class="mb-3">
+      <label 
+        for="hole_${holeNumber}_shot_${newShotNum}_distance" 
+        class="form-label custom-form-label"
+      >
+        ${distanceLabel}
+      </label>
+      <input 
+        type="number" 
+        class="form-control custom-form-input" 
+        name="hole_${holeNumber}_shot_${newShotNum}_distance" 
+        id="hole_${holeNumber}_shot_${newShotNum}_distance" 
+        required
+      >
+    </div>
+
+    <div class="mb-3">
+      <label 
+        for="hole_${holeNumber}_shot_${newShotNum}_lie" 
+        class="form-label custom-form-label"
+      >
+        Lie:
+      </label>
+      <select 
+        class="form-select custom-form-select" 
+        name="hole_${holeNumber}_shot_${newShotNum}_lie" 
+        id="hole_${holeNumber}_shot_${newShotNum}_lie" 
+        required 
+        onchange="updateDistanceLabel(${holeNumber}, ${newShotNum}); 
+                  updateMissDirection(${holeNumber}, ${newShotNum}, ${par});"
+      >
+        <option value="Tee" ${preselectedLie === 'Tee' ? 'selected' : ''}>Tee</option>
+        <option value="Fairway" ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
+        <option value="Rough" ${preselectedLie === 'Rough' ? 'selected' : ''}>Rough</option>
+        <option value="Bunker" ${preselectedLie === 'Bunker' ? 'selected' : ''}>Bunker</option>
+        <option value="Recovery" ${preselectedLie === 'Recovery' ? 'selected' : ''}>Recovery</option>
+        <option value="Green" ${preselectedLie === 'Green' ? 'selected' : ''}>Green</option>
+      </select>
+    </div>
+
+    <!-- Put checkboxes together in a div with your spacing classes -->
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
+      <div class="form-check">
+        <input 
+          type="checkbox" 
+          class="form-check-input" 
+          name="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
+          id="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds" 
+          value="1"
+          onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'OOB', ${par})"
+        >
+        <label 
+          class="form-check-label" 
+          for="hole_${holeNumber}_shot_${newShotNum}_out_of_bounds"
+        >
+          Out of Bounds
+        </label>
+      </div>
+      <div class="form-check">
+        <input 
+          type="checkbox" 
+          class="form-check-input" 
+          name="hole_${holeNumber}_shot_${newShotNum}_hazard" 
+          id="hole_${holeNumber}_shot_${newShotNum}_hazard" 
+          value="1"
+          onchange="addDummyShot(${holeNumber}, ${newShotNum}, 'hazard', ${par})"
+        >
+        <label 
+          class="form-check-label" 
+          for="hole_${holeNumber}_shot_${newShotNum}_hazard"
+        >
+          Hazard/Unplayable
+        </label>
+      </div>
+    </div>
+
+    <!-- Remove button below the checkboxes -->
+    <button 
+      type="button"
+      class="btn btn-outline-danger btn-sm remove-shot-btn"
+      onclick="removeShot(${holeNumber}, ${newShotNum})"
+    >
+      Remove Shot
+    </button>
+  </div>
+`;
 
     // Insert the newShotHTML into the page
     shotsContainer.insertAdjacentHTML('beforeend', newShotHTML);
@@ -388,7 +396,7 @@ function addDummyShot(holeNumber, shotNumber, penaltyType, par) {
 
         // Create dummy shot HTML
         const dummyShotHTML = `
-            <div class="shot-card" id="${dummyShotId}">
+            <div class="shot-card mb-3" id="${dummyShotId}">
                 <h5>Shot #${penaltyShotNumber}</h5>
                 <div class="mb-3">
                     <label for="${dummyShotId}_distance" class="form-label">Distance (yards):</label>
@@ -418,7 +426,7 @@ function addDummyShot(holeNumber, shotNumber, penaltyType, par) {
         // Create new shot HTML with prefilled distance and lie
         const replacementShotNumber = getNextShotNumber(holeNumber) + 1;
         const nextShotHTML = `
-            <div class="shot-card" id="${nextShotId}">
+            <div class="shot-card mb-3" id="${nextShotId}">
                 <h5>Shot #${replacementShotNumber}</h5>
                 <div class="mb-3">
                     <label for="hole_${holeNumber}_shot_${shotNumber + 1}_distance" class="form-label">Distance (yards):</label>
@@ -471,7 +479,7 @@ function addDummyShot(holeNumber, shotNumber, penaltyType, par) {
                 </div>
                 <button 
                     type="button" 
-                    class="btn btn-danger btn-sm remove-shot-btn" 
+                    class="btn btn-outline-danger btn-sm remove-shot-btn" 
                     onclick="removeShot(${holeNumber}, ${shotNumber + 1})"
                 >
                     Remove Shot
