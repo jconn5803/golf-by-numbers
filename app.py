@@ -138,15 +138,25 @@ def courses():
 @login_required
 def add_course():
     if request.method == 'POST':
-        course_name = request.form.get('name')
-        location = request.form.get('location')
+        course_name = request.form.get('name').strip()
+        location = request.form.get('location').strip()
 
-        new_course = Course(name=course_name, location=location)
-        db.session.add(new_course)
-        db.session.commit()
+        # 1. Check if a course with the same name & location already exists
+        existing_course = Course.query.filter_by(name=course_name, location=location).first()
 
-        return redirect(url_for('add_tee', course_id=new_course.courseID))
+        if existing_course:
+            # 2. Flash an error and re-render the form
+            flash('A course with that name and location already exists!', 'danger')
+            return redirect(url_for('add_course'))
+        else:
+            # 3. Create a new course if it doesn't exist
+            new_course = Course(name=course_name, location=location)
+            db.session.add(new_course)
+            db.session.commit()
 
+            return redirect(url_for('add_tee', course_id=new_course.courseID))
+
+    # GET request: just render the blank form
     return render_template('add_course.html')
 
 # Add a route to populate tees and holes 
