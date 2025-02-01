@@ -184,6 +184,14 @@ def add_holes(tee_id):
             db.session.add(hole)
 
         db.session.commit()
+
+        #  Now recalculate the tee’s total_distance
+        #    We can do this with a simple sum over tee.holes
+        total = sum(h.distance or 0 for h in tee.holes)  # handle None safely
+        tee.total_distance = total
+
+        # Second commit: Update the tee record
+        db.session.commit()
         return redirect('/courses')  # Replace with the appropriate redirect
     
     return render_template('add_holes.html', tee=tee)
