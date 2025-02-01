@@ -2,61 +2,88 @@
 
 {% block title %}Add Round{% endblock %}
 
+{% block extra_css %}
+  <!-- Link to your customized add_round.css -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/add_round.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
-    <h2 class="text-center">Add a New Round</h2>
-    <form method="POST" class="mt-4">
-        <!-- Course Selection -->
-        <div class="mb-3">
-            <label for="course" class="form-label">Select Course</label>
-            <select class="form-select" id="course" name="course" required>
-                <option value="" disabled selected>Choose a course...</option>
-                {% for course in courses %}
-                    <option value="{{ course.courseID }}">{{ course.name }}</option>
-                {% endfor %}
-            </select>
-            <div class="mt-2">
-                <a href="{{ url_for('add_course') }}" class="btn btn-secondary btn-sm">Add Course</a>
-            </div>
-        </div>
+  <h2 class="text-center mb-4">Add a New Round</h2>
 
-        <!-- Tee Selection -->
-        <div class="mb-3">
-            <label for="tee" class="form-label">Select Tee</label>
-            <select class="form-select" id="tee" name="tee" required>
-                <option value="" disabled selected>Choose a tee...</option>
-            </select>
-            <div class="mt-2">
-                <a id="add-tee-button" class="btn btn-secondary btn-sm" style="display:none;">Add Tee</a>
-            </div>
-        </div>
+  <!-- 
+    Example: adding "custom-form" so you can style the form container
+    to match your site’s modern look (padding, background, borders, etc.).
+  -->
+  <form method="POST" class="custom-form p-4">
+    
+    <!-- Course Selection -->
+    <div class="mb-4">
+      <label for="course" class="form-label custom-form-label">Select Course</label>
+      
+      <select class="form-select custom-form-select" id="course" name="course" required>
+        <option value="" disabled selected>Choose a course...</option>
+        {% for course in courses %}
+          <option value="{{ course.courseID }}">{{ course.name }}</option>
+        {% endfor %}
+      </select>
+      
+      <!-- Additional link for "Add Course" -->
+      <div class="mt-2">
+        <a href="{{ url_for('add_course') }}" class="btn btn-outline-dark btn-sm">
+          Add Course
+        </a>
+      </div>
+    </div>
 
-        <!-- Date Selection -->
-        <div class="mb-3">
-            <label for="date_played" class="form-label">Date Played</label>
-            <input type="date" class="form-control" id="date_played" name="date_played" required>
-        </div>
+    <!-- Tee Selection -->
+    <div class="mb-4">
+      <label for="tee" class="form-label custom-form-label">Select Tee</label>
+      <select class="form-select custom-form-select" id="tee" name="tee" required>
+        <option value="" disabled selected>Choose a tee...</option>
+      </select>
+      <div class="mt-2">
+        <!-- Shown/hidden via JS, class remains so you can style it consistently -->
+        <a id="add-tee-button" class="btn btn-outline-dark btn-sm" style="display:none;">
+          Add Tee
+        </a>
+      </div>
+    </div>
 
-        <!-- Round Type Selection -->
-        <div class="mb-3">
-            <label for="round_type" class="form-label">Round Type</label>
-            <select class="form-select" id="round_type" name="round_type" required>
-                <option value="" disabled selected>Choose a round type...</option>
-                <option value="Practice">Practice</option>
-                <option value="Qualifying">Qualifying</option>
-                <option value="Tournament">Tournament</option>
-            </select>
-        </div>
+    <!-- Date Played -->
+    <div class="mb-4">
+      <label for="date_played" class="form-label custom-form-label">Date Played</label>
+      <input 
+        type="date" 
+        class="form-control custom-form-input" 
+        id="date_played" 
+        name="date_played" 
+        required
+      >
+    </div>
 
-        <!-- Submit Button -->
-        <div class="text-center">
-            <button type="submit" class="btn btn-primary">Next</button>
-        </div>
-    </form>
+    <!-- Round Type -->
+    <div class="mb-4">
+      <label for="round_type" class="form-label custom-form-label">Round Type</label>
+      <select class="form-select custom-form-select" id="round_type" name="round_type" required>
+        <option value="" disabled selected>Choose a round type...</option>
+        <option value="Practice">Practice</option>
+        <option value="Qualifying">Qualifying</option>
+        <option value="Tournament">Tournament</option>
+      </select>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="text-center">
+      <button type="submit" class="btn btn-cta px-4">
+        Next
+      </button>
+    </div>
+
+  </form>
 </div>
 {% endblock %}
 
 {% block extra_js %}
   <script src="{{ url_for('static', filename='js/add_round.js') }}"></script>
 {% endblock %}
-

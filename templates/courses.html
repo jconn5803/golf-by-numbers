@@ -2,32 +2,65 @@
 
 {% block title %}Courses{% endblock %}
 
-{% block content %}
-<div class="container mt-5">
-    <h1 class="text-center mb-4">Golf Courses</h1>
-    <table class="table table-striped table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>Name</th>
-                <th>Location</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for course in courses %}
-            <tr>
-                <td>{{ course.name }}</td>
-                <td>{{ course.location }}</td>
-                <td>
-                    <a href="{{ url_for('add_tee', course_id=course.courseID) }}" class="btn btn-primary btn-sm">Add Tee</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <div class="text-center mt-3">
-        <a href="/add_course" class="btn btn-success">Add a New Course</a>
-    </div>
-</div>
+
+{% block extra_css %}
+  <!-- Link to your customized add_course.css -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/courses.css') }}">
 {% endblock %}
 
+{% block content %}
+<div class="container mt-5">
+  <h1 class="text-center mb-4">Golf Courses</h1>
+
+  <!-- Search Form -->
+  <form method="GET" action="{{ url_for('courses') }}" class="d-flex justify-content-center mb-4">
+    <!-- A text input for the search -->
+    <input 
+      type="text" 
+      name="search" 
+      class="form-control custom-form-input me-2"
+      placeholder="Search courses..." 
+      value="{{ request.args.get('search', '') }}"
+      style="max-width: 300px;"
+    >
+    <button type="submit" class="btn btn-cta">
+      Search
+    </button>
+  </form>
+
+  <!-- Table Wrapper (optional) -->
+  <div class="custom-table-wrapper">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in courses %}
+        <tr>
+          <td>{{ course.name }}</td>
+          <td>{{ course.location }}</td>
+          <td>
+            <a 
+              href="{{ url_for('add_tee', course_id=course.courseID) }}" 
+              class="btn btn-outline-dark btn-sm"
+            >
+              Add Tee
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="text-center mt-3">
+    <a href="/add_course" class="btn btn-cta">
+      Add a New Course
+    </a>
+  </div>
+</div>
+{% endblock %}

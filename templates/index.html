@@ -4,27 +4,54 @@
 Home - UnderParData
 {% endblock %}
 
+{% block extra_css %}
+  <!-- If you have page-specific CSS, include it here -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-  <!-- Light grey box with slight border radius -->
-  <div class="p-4 bg-light" style="border-radius: 8px; border: 1px solid #ccc;">
-    <h1 class="mb-4 text-center">Track Your Golf Stats with UnderParData</h1>
-    <p>
-      Golf is a game of precision, strategy, and continuous improvement. At UnderParData, we provide you
-      with easy-to-use tools to help you lower your handicap. Whether you're a weekend warrior or
-      aspiring tour pro, we've got the advanced analytics to help you get the most out of each round.
-    </p>
-    <ul>
-      <li>Record detailed shot-by-shot data to identify where strokes are lost</li>
-      <li>Visualize your performance with strokes gained analytics</li>
-      <li>Compare your stats with friends or professional benchmarks</li>
-      <li>Track progress over time with interactive charts and graphs</li>
-    </ul>
-    <p>
-      Ready to take your game to the next level? <strong>Sign up now</strong> or
-      explore our powerful <a href="/sg_calc">Strokes Gained Calculator</a> to get an idea of how
-      your game stacks up.
-    </p>
+
+<!-- Hero Section -->
+<div class="hero-section">
+  <!-- Overlay for darkening the background image -->
+  <div class="hero-overlay"></div>
+  <div class="container hero-content">
+    <div class="row">
+      <div class="col-12 col-md-8">
+        <h1 class="hero-title">Strokes Gained Stats Tracking</h1>
+        <p class="hero-subtitle">Easy to use stat tracking system to identify strenghts and weaknesses in your game.</p>
+        <a href="/login" class="btn btn-cta">Get started now!</a>
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- Below the Hero: Example Info Section -->
+<div class="container my-5">
+  <div class="row">
+    <div class="col-lg-6 d-flex align-items-center">
+      <div>
+        <h2 class="mb-3"></h2>
+        <p>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse tempus quam non varius
+          vehicula. Praesent sodales arcu turpis, eget consequat sapien viverra ac.
+        </p>
+        <p>
+          <strong>Ready to learn more?</strong> Get started by
+          <a href="/register">creating an account</a> or take a look at our
+          <a href="/about">About Us</a> page for more information.
+        </p>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <!-- Replace with a relevant image (or remove if you prefer text-only) -->
+      <img 
+        src="{{ url_for('static', filename='images/medical-team.jpg') }}" 
+        class="img-fluid rounded shadow" 
+        alt="Medical Team" 
+      />
+    </div>
+  </div>
+</div>
+
 {% endblock %}

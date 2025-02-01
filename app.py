@@ -87,7 +87,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        return "User registered successfully!", 200
+        return redirect('/login')
 
     # If GET request, just show the register template
     return render_template('register.html')
@@ -121,8 +121,16 @@ def logout():
 
 # Add a route to display a list of courses in the database
 @app.route('/courses')
-def view_courses():
-    courses = Course.query.all()
+@login_required
+def courses():
+    query = request.args.get('search', '')  # Grab the query from ?search= in URL
+    if query:
+        # Filter courses whose name matches the query
+        courses = Course.query.filter(Course.name.ilike(f"%{query}%")).all()
+    else:
+        # If no search query, display all courses
+        courses = Course.query.all()
+
     return render_template('courses.html', courses=courses)
 
 # Add a route to add a course
@@ -160,40 +168,51 @@ def add_tee(course_id):
 
     return render_template('add_tee.html', course=course)
 
-# Add a route to add in the holes
 @app.route('/add_holes/<int:tee_id>', methods=['GET', 'POST'])
 @login_required
 def add_holes(tee_id):
     tee = Tee.query.get_or_404(tee_id)
     if request.method == 'POST':
-        # Get data from the form
+        # 1) Get the total number of holes from the slider
         num_holes = int(request.form.get('num_holes', 18))
-        holes_data = request.form.getlist('holes')
-        pars_data = request.form.getlist('pars')
+
+        # 2) Get the list of distances. 
+        #    This works because your <input> for hole distance has name="distances"
         distances_data = request.form.getlist('distances')
 
-        # Add holes to the database
+        # Remove any references to request.form.getlist('pars') or request.form.getlist('holes')
+
+        # 3) For each hole index, retrieve distance from distances_data
+        #    and the par from request.form.get(f"par_{i+1}")
         for i in range(num_holes):
+            distance_str = distances_data[i]  # e.g. "385"
+            distance = int(distance_str) if distance_str else 0
+
+            # Get the par using the hole-specific name "par_1", "par_2", etc.
+            par_value = request.form.get(f"par_{i+1}", "4")  # default to "4" if not found
+            par = int(par_value)
+
+            # Create the Hole object
             hole = Hole(
-                courseID=tee.courseID,
-                teeID=tee.teeID,
-                number=i + 1,
-                par=int(pars_data[i]),
-                distance=int(distances_data[i])
+                courseID = tee.courseID,
+                teeID    = tee.teeID,
+                number   = i + 1,
+                par      = par,
+                distance = distance
             )
             db.session.add(hole)
 
+        # 4) Commit the newly added holes
         db.session.commit()
 
-        #  Now recalculate the tee’s total_distance
-        #    We can do this with a simple sum over tee.holes
-        total = sum(h.distance or 0 for h in tee.holes)  # handle None safely
-        tee.total_distance = total
-
-        # Second commit: Update the tee record
+        # 5) Recalculate the tee’s total_distance
+        tee.total_distance = sum(h.distance or 0 for h in tee.holes)
         db.session.commit()
-        return redirect('/courses')  # Replace with the appropriate redirect
-    
+
+        # 6) Redirect to wherever you’d like after saving
+        return redirect('/courses')
+
+    # If GET, just render the add_holes form
     return render_template('add_holes.html', tee=tee)
 
 # Add a route to add a round in

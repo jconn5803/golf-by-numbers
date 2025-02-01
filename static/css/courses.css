@@ -1,0 +1,75 @@
+/************************************************
+  Table Wrapper
+*************************************************/
+.custom-table-wrapper {
+    width: 100%;
+    overflow-x: auto;  /* Allows horizontal scroll if table is wide */
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+  }
+  
+  /************************************************
+    Custom Table
+  *************************************************/
+  .custom-table {
+    width: 100%;
+    border-collapse: collapse; 
+    border-radius: 8px;        /* Rounded corners if you prefer */
+    overflow: hidden;          /* Clip corners */
+    table-layout: auto;
+  }
+  
+  .custom-table thead {
+    background-color: #f6f6f6;  /* Light grey or any custom color */
+  }
+  
+  .custom-table th,
+  .custom-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .custom-table thead th {
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #ccc;
+  }
+  
+  .custom-table tbody tr:hover {
+    background-color: #f9f9f9; /* Slight hover effect */
+  }
+  
+  /************************************************
+    Buttons (Matches your existing theme)
+  ************************************************/
+  /* Outline dark button style */
+  .btn-outline-dark {
+    border: 2px solid #333;
+    color: #333;
+    border-radius: 6px;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .btn-outline-dark:hover {
+    background-color: #333;
+    color: #fff;
+  }
+  
+  /* Accent CTA button style */
+  .btn.btn-cta {
+    background-color: #ffc107;
+    color: #000;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .btn.btn-cta:hover {
+    background-color: #e0a800;
+    color: #fff;
+  }
+  

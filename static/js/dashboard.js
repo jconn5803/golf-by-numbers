@@ -351,14 +351,14 @@
                  .startAngle(d => d.startAngle)
                  .endAngle(d => d.endAngle);
 
-   const color = d3.scaleOrdinal(d3.schemeSet2);
+   
 
    svg.selectAll("path")
       .data(dataWithAngles)
       .enter()
       .append("path")
       .attr("d", arc)
-      .attr("fill", (d, i) => color(i))
+      .attr("fill", 'red')
       .attr("stroke", "white")
       .style("stroke-width", "2px")
       .on("mouseover", function(event, d) {

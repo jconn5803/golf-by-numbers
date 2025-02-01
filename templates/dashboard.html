@@ -1,401 +1,396 @@
 {% extends "base.html" %}
 
 {% block title %}
-    Dashboard with Multiple Tabs
+    Dashboard
 {% endblock %}
 
 {% block extra_css %}
-  <!-- If you have page-specific CSS, include it here -->
+  <!-- Link to your customized dashboard.css -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 {% endblock %}
 
 {% block content %}
-<!-- SECONDARY NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 shadow-sm">
+<div class="dashboard-wrapper">
+  
+  <!-- SECONDARY NAVBAR -->
+<nav class="navbar border-0 bg-transparent mb-4 p-0">
   <div class="container-fluid">
-    <div class="navbar-brand fw-semibold">Dashboard Options</div>
-    <button 
-      class="navbar-toggler" 
-      type="button" 
-      data-bs-toggle="collapse" 
-      data-bs-target="#secondNavbarContent" 
-      aria-controls="secondNavbarContent"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="secondNavbarContent">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('add_round') }}">Add Round</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('add_course') }}">Add Course</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('view_courses') }}">All Courses</a>
-        </li>
-      </ul>
-    </div>
+    <ul class="nav">
+      <li class="nav-item">
+        <a class="nav-link fw-bold text-black me-3" href="{{ url_for('add_round') }}">
+          Add Round
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link fw-bold text-black me-3" href="{{ url_for('add_course') }}">
+          Add Course
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link fw-bold text-black" href="{{ url_for('courses') }}">
+          All Courses
+        </a>
+      </li>
+    </ul>
   </div>
 </nav>
-<!-- END SECONDARY NAVBAR -->
-<h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
 
-<!-- FILTER FORM -->
-<form id="filterForm" class="row g-3 mb-4">
-  <!-- Course filter -->
-  <div class="col-auto">
-    <label for="course" class="form-label">Course:</label>
-    <select class="form-control" name="course" id="course">
-      <option value="">All Courses</option>
-      {% for c in user_courses %}
-      <option value="{{ c.courseID }}">{{ c.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
+  <!-- END SECONDARY NAVBAR -->
 
-  <!-- Round filter -->
-  <div class="col-auto">
-    <label for="round" class="form-label">Round:</label>
-    <select class="form-control" name="round" id="round">
-      <option value="">All Rounds</option>
-      {% for r in user_rounds %}
-      <option value="{{ r.roundID }}">
-        {{ r.course.name }} - {{ r.date_played }}
-      </option>{
-      {% endfor %}
-    </select>
-  </div>
+  <h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
 
-  <!-- Round type filter -->
-  <div class="col-auto">
-    <label for="round_type" class="form-label">Round Type:</label>
-    <select class="form-control" name="round_type" id="round_type">
-      <option value="">All Types</option>
-      <option value="Practice">Practice</option>
-      <option value="Qualifying">Qualifying</option>
-      <option value="Tournament">Tournament</option>
-    </select>
-  </div>
+  <!-- FILTER FORM -->
+  <form id="filterForm" class="row row-cols-lg-auto g-3 align-items-end mb-4 dashboard-filter">
+    <!-- Course filter -->
+    <div class="col">
+      <label for="course" class="form-label">Course:</label>
+      <select class="form-control" name="course" id="course">
+        <option value="">All Courses</option>
+        {% for c in user_courses %}
+          <option value="{{ c.courseID }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  
+    <!-- Round filter -->
+    <div class="col">
+      <label for="round" class="form-label">Round:</label>
+      <select class="form-control" name="round" id="round">
+        <option value="">All Rounds</option>
+        {% for r in user_rounds %}
+          <option value="{{ r.roundID }}">{{ r.course.name }} - {{ r.date_played }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  
+    <!-- Round type filter -->
+    <div class="col">
+      <label for="round_type" class="form-label">Round Type:</label>
+      <select class="form-control" name="round_type" id="round_type">
+        <option value="">All Types</option>
+        <option value="Practice">Practice</option>
+        <option value="Qualifying">Qualifying</option>
+        <option value="Tournament">Tournament</option>
+      </select>
+    </div>
+  
+    <!-- Date range filter -->
+    <div class="col">
+      <label for="startDate" class="form-label">Start Date:</label>
+      <input type="date" class="form-control" name="startDate" id="startDate" />
+    </div>
+  
+    <div class="col">
+      <label for="endDate" class="form-label">End Date:</label>
+      <input type="date" class="form-control" name="endDate" id="endDate" />
+    </div>
+  
+    <!-- Button -->
+    <div class="col">
+      <button type="submit" class="btn btn-cta">Apply Filters</button>
+    </div>
+  </form>
 
+  <!-- BOOTSTRAP TABS NAVIGATION -->
+  <ul class="nav nav-tabs dashboard-tabs" id="dashboardTabs" role="tablist">
+    <!-- Overall Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="overall-tab" data-bs-toggle="tab"
+        data-bs-target="#overallTabPane" type="button" role="tab"
+        aria-controls="overallTabPane" aria-selected="true">
+        Overall
+      </button>
+    </li>
+    <!-- Tee Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tee-tab" data-bs-toggle="tab"
+        data-bs-target="#teeTabPane" type="button" role="tab"
+        aria-controls="teeTabPane" aria-selected="false">
+        Tee
+      </button>
+    </li>
+    <!-- Approach Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="approach-tab" data-bs-toggle="tab"
+        data-bs-target="#approachTabPane" type="button" role="tab"
+        aria-controls="approachTabPane" aria-selected="false">
+        Approach
+      </button>
+    </li>
+    <!-- Short Game Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="shortgame-tab" data-bs-toggle="tab"
+        data-bs-target="#shortGameTabPane" type="button" role="tab"
+        aria-controls="shortGameTabPane" aria-selected="false">
+        Short Game
+      </button>
+    </li>
+    <!-- Putting Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="putting-tab" data-bs-toggle="tab"
+        data-bs-target="#puttingTabPane" type="button" role="tab"
+        aria-controls="puttingTabPane" aria-selected="false">
+        Putting
+      </button>
+    </li>
+  </ul>
 
-  <!-- Date range filter -->
-  <div class="col-auto">
-    <label for="startDate" class="form-label">Start Date:</label>
-    <input type="date" class="form-control" name="startDate" id="startDate" />
-  </div>
-  <div class="col-auto">
-    <label for="endDate" class="form-label">End Date:</label>
-    <input type="date" class="form-control" name="endDate" id="endDate" />
-  </div>
-
-  <div class="col-auto mt-4">
-    <button type="submit" class="btn btn-primary mt-2">Apply Filters</button>
-  </div>
-</form>
-
-<!-- BOOTSTRAP TABS NAVIGATION -->
-<ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
-  <!-- Overall Tab -->
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="overall-tab" data-bs-toggle="tab"
-      data-bs-target="#overallTabPane" type="button" role="tab"
-      aria-controls="overallTabPane" aria-selected="true">
-      Overall
-    </button>
-  </li>
-  <!-- Tee Tab -->
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="tee-tab" data-bs-toggle="tab"
-      data-bs-target="#teeTabPane" type="button" role="tab"
-      aria-controls="teeTabPane" aria-selected="false">
-      Tee
-    </button>
-  </li>
-  <!-- Approach Tab -->
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="approach-tab" data-bs-toggle="tab"
-      data-bs-target="#approachTabPane" type="button" role="tab"
-      aria-controls="approachTabPane" aria-selected="false">
-      Approach
-    </button>
-  </li>
-  <!-- Short Game Tab -->
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="shortgame-tab" data-bs-toggle="tab"
-      data-bs-target="#shortGameTabPane" type="button" role="tab"
-      aria-controls="shortGameTabPane" aria-selected="false">
-      Short Game
-    </button>
-  </li>
-  <!-- Putting Tab -->
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="putting-tab" data-bs-toggle="tab"
-      data-bs-target="#puttingTabPane" type="button" role="tab"
-      aria-controls="puttingTabPane" aria-selected="false">
-      Putting
-    </button>
-  </li>
-</ul>
-
-<!-- TAB CONTENT CONTAINER -->
-<div class="tab-content" id="dashboardTabsContent">
-  <!-- Overall Tab Pane -->
-  <div class="tab-pane fade show active p-3" id="overallTabPane" role="tabpanel" aria-labelledby="overall-tab">
-    <h4>Overall</h4>
-    <!-- Example Cards -->
-    <div class="row mb-3">
-      <!-- Scoring Average card -->
-      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Scoring Average</h6>
-            <h3 class="card-title" id="scoringAvgCard">--</h3>
+  <!-- TAB CONTENT CONTAINER -->
+  <div class="tab-content dashboard-tab-content" id="dashboardTabsContent">
+    <!-- Overall Tab Pane -->
+    <div class="tab-pane fade show active p-3" id="overallTabPane" role="tabpanel" aria-labelledby="overall-tab">
+      <h4>Overall</h4>
+      <!-- Example Cards -->
+      <div class="row mb-3">
+        <!-- Scoring Average card -->
+        <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Scoring Average</h6>
+              <h3 class="card-title" id="scoringAvgCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Score vs Par card -->
+        <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Scoring vs. Par</h6>
+              <h3 class="card-title" id="scoringVsParCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Total Rounds card -->
+        <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Total Rounds</h6>
+              <h3 class="card-title" id="totalRoundsCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Par 3 Average -->
+        <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Par 3 Avg</h6>
+              <h3 class="card-title" id="par3Card">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Par 4 Average -->
+        <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Par 4 Avg</h6>
+              <h3 class="card-title" id="par4Card">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Par 5 Average -->
+        <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Par 5 Avg</h6>
+              <h3 class="card-title" id="par5Card">--</h3>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Score vs Par card -->
-      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Scoring vs. Par</h6>
-            <h3 class="card-title" id="scoringVsParCard">--</h3>
+
+      <!-- Strokes Gained Chart -->
+      <h5>Strokes Gained Chart</h5>
+      <canvas id="sgChart" width="400" height="200"></canvas>
+
+      <!-- Distance Histogram -->
+      <h5>Shot Distance Histogram</h5>
+      <canvas id="distanceHistogram" width="400" height="200"></canvas>
+
+      <!-- Scoring Trend Chart -->
+      <h5>Scoring vs Par Trend</h5>
+      <canvas id="roundPerformanceChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Tee Tab Pane -->
+    <div class="tab-pane fade p-3" id="teeTabPane" role="tabpanel" aria-labelledby="tee-tab">
+      <h4>Tee Stats</h4>
+      <div class="row mb-3">
+        <!-- Card 1: Off the Tee SG -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">SG Off the Tee</h6>
+              <h3 class="card-title" id="teeSGCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Card 2: Average Tee Distance -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Avg Tee Distance</h6>
+              <h3 class="card-title" id="teeDistanceCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Card 3: In Play % -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">In Play %</h6>
+              <h3 class="card-title" id="teeLieCard">--</h3>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Total Rounds card -->
-      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Total Rounds</h6>
-            <h3 class="card-title" id="totalRoundsCard">--</h3>
-          </div>
-        </div>
-      </div>
-      <!-- Par 3 Average -->
-      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Par 3 Avg</h6>
-            <h3 class="card-title" id="par3Card">--</h3>
-          </div>
-        </div>
-      </div>
-      <!-- Par 4 Average -->
-      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Par 4 Avg</h6>
-            <h3 class="card-title" id="par4Card">--</h3>
-          </div>
-        </div>
-      </div>
-      <!-- Par 5 Average -->
-      <div class="col-sm-6 col-md-4 col-lg-2 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Par 5 Avg</h6>
-            <h3 class="card-title" id="par5Card">--</h3>
-          </div>
-        </div>
+
+      <!-- Miss Direction Fairway Visualization -->
+      <h5>Miss Direction Visualization</h5>
+      <div id="fairwayContainer">
+        <div id="leftMissSection"></div>
+        <div id="centerHitSection"></div>
+        <div id="rightMissSection"></div>
       </div>
     </div>
 
-    <!-- Strokes Gained Chart -->
-    <h5>Strokes Gained Chart</h5>
-    <canvas id="sgChart" width="400" height="200"></canvas>
+    <!-- Approach Tab Pane -->
+    <div class="tab-pane fade p-3" id="approachTabPane" role="tabpanel" aria-labelledby="approach-tab">
+      <h4>Approach Stats</h4>
 
-    <!-- Distance Histogram -->
-    <h5>Shot Distance Histogram</h5>
-    <canvas id="distanceHistogram" width="400" height="200"></canvas>
-
-    <!-- Scoring Trend Chart -->
-    <h5>Scoring vs Par Trend</h5>
-    <canvas id="roundPerformanceChart" width="400" height="200"></canvas>
-    
-  </div>
-
-  <!-- Tee Tab Pane -->
-  <div class="tab-pane fade p-3" id="teeTabPane" role="tabpanel" aria-labelledby="tee-tab">
-    <h4>Tee Stats</h4>
-    <div class="row mb-3">
-      <!-- Card 1: Off the Tee SG -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">SG Off the Tee</h6>
-            <h3 class="card-title" id="teeSGCard">--</h3>
+      <div class="row mb-3">
+        <!-- Card: Average SG Approach -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Avg SG Approach</h6>
+              <h3 class="card-title" id="approachSGCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Card: % GIR (Approach) -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">% GIR</h6>
+              <h3 class="card-title" id="approachGirCard">--</h3>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Card 2: Average Tee Distance -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Avg Tee Distance</h6>
-            <h3 class="card-title" id="teeDistanceCard">--</h3>
-          </div>
-        </div>
-      </div>
-      <!-- Card 3: In Play % -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">In Play %</h6>
-            <h3 class="card-title" id="teeLieCard">--</h3>
-          </div>
-        </div>
-      </div>
+
+      <!-- D3.js Approach Miss Directions Visualization -->
+      <h5>Approach Miss Directions</h5>
+      <div id="approachMissChart" style="width:400px; height:400px;"></div>
+
+      <!-- Approach Shots Table -->
+      <h5 class="mt-4">Approach Shots by Distance</h5>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Distance Range</th>
+            <th>SG per Shot</th>
+            <th>Proximity to Hole (ft)</th>
+            <th>Green Hit %</th>
+          </tr>
+        </thead>
+        <tbody id="approachTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
     </div>
 
-    <!-- Miss Direction Fairway Visualization -->
-    <h5>Miss Direction Visualization</h5>
-    <div id="fairwayContainer">
-      <div id="leftMissSection"></div>
-      <div id="centerHitSection"></div>
-      <div id="rightMissSection"></div>
-</div>
-
-  </div>
-
-  <!-- Approach Tab Pane -->
-  <div class="tab-pane fade p-3" id="approachTabPane" role="tabpanel" aria-labelledby="approach-tab">
-    <h4>Approach Stats</h4>
-
-    <div class="row mb-3">
-      <!-- Card: Average SG Approach -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Avg SG Approach</h6>
-            <h3 class="card-title" id="approachSGCard">--</h3>
+    <!-- Short Game Tab Pane -->
+    <div class="tab-pane fade p-3" id="shortGameTabPane" role="tabpanel" aria-labelledby="shortgame-tab">
+      <h4>Short Game Stats</h4>
+      <div class="row mb-3">
+        <!-- Card: Up & Down Percentage -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Up & Down %</h6>
+              <h3 class="card-title" id="upDownPercentCard">--</h3>
+            </div>
+          </div>
+        </div>
+        <!-- Card: SG Around the Green -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">SG Around the Green</h6>
+              <h3 class="card-title" id="aroundGreenSGCard">--</h3>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Card: % GIR (Approach) -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">% GIR</h6>
-            <h3 class="card-title" id="approachGirCard">--</h3>
-          </div>
-        </div>
-      </div>
+      <!-- Bunker Shots Table-->
+      <h5>Bunker Shots</h5>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Distance</th>
+            <th>Avg Proximity (ft)</th>
+            <th>Up & Down %</th>
+          </tr>
+        </thead>
+        <tbody id="bunkerTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+      <!-- Non-Bunker Shots Table-->
+      <h5>Non-Bunker Shots</h5>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Distance</th>
+            <th>Avg Proximity (ft)</th>
+            <th>Up & Down %</th>
+          </tr>
+        </thead>
+        <tbody id="nonBunkerTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
     </div>
 
-    <!-- D3.js Approach Miss Directions Visualization -->
-    <h5>Approach Miss Directions</h5>
-    <div id="approachMissChart" style="width:400px; height:400px;"></div>
-
-    <!-- Approach Shots Table -->
-    <h5 class="mt-4">Approach Shots by Distance</h5>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Distance Range</th>
-          <th>SG per Shot</th>
-          <th>Proximity to Hole (ft)</th>
-          <th>Green Hit %</th>
-        </tr>
-      </thead>
-      <tbody id="approachTableBody">
-        <!-- Will be populated by JavaScript -->
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Short Game Tab Pane -->
-  <div class="tab-pane fade p-3" id="shortGameTabPane" role="tabpanel" aria-labelledby="shortgame-tab">
-    <h4>Short Game Stats</h4>
-    <div class="row mb-3">
-      <!-- Card: Up & Down Percentage -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">Up & Down %</h6>
-            <h3 class="card-title" id="upDownPercentCard">--</h3>
+    <!-- Putting Tab Pane -->
+    <div class="tab-pane fade p-3" id="puttingTabPane" role="tabpanel" aria-labelledby="putting-tab">
+      <h4>Putting Stats</h4>
+      <div class="row mb-3">
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">SG Putting</h6>
+              <h3 class="card-title" id="puttingSGCard">--</h3>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Card: SG Around the Green -->
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">SG Around the Green</h6>
-            <h3 class="card-title" id="aroundGreenSGCard">--</h3>
-          </div>
-        </div>
-      </div>
+      <!-- Putting Stats Table -->
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Distance Range</th>
+            <th>Make Rate (%)</th>
+            <th>3-Putt Avoid (%)</th>
+            <th>Avg Next Putt Distance (ft)</th>
+          </tr>
+        </thead>
+        <tbody id="puttingTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
     </div>
-    <!-- Bunker Shots Table-->
-    <h5>Bunker Shots</h5>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Distance</th>
-          <th>Avg Proximity (ft)</th>
-          <th>Up & Down %</th>
-        </tr>
-      </thead>
-      <tbody id="bunkerTableBody">
-        <!-- Populated by JavaScript -->
-      </tbody>
-    </table>
-    <!-- Non-Bunker Shots Table-->
-    <h5>Non-Bunker Shots</h5>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Distance</th>
-          <th>Avg Proximity (ft)</th>
-          <th>Up & Down %</th>
-        </tr>
-      </thead>
-      <tbody id="nonBunkerTableBody">
-        <!-- Populated by JavaScript -->
-      </tbody>
-    </table>
   </div>
 
-  <!-- Putting Tab Pane -->
-  <div class="tab-pane fade p-3" id="puttingTabPane" role="tabpanel" aria-labelledby="putting-tab">
-    <h4>Putting Stats</h4>
-    <div class="row mb-3">
-      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card text-center shadow">
-          <div class="card-body">
-            <h6 class="card-subtitle mb-2 text-muted">SG Putting</h6>
-            <h3 class="card-title" id="puttingSGCard">--</h3>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Putting Stats Table -->
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Distance Range</th>
-          <th>Make Rate (%)</th>
-          <th>3-Putt Avoid (%)</th>
-          <th>Avg Next Putt Distance (ft)</th>
-        </tr>
-      </thead>
-      <tbody id="puttingTableBody">
-        <!-- Populated by JavaScript -->
-      </tbody>
-    </table>
-  </div>
-</div>
+</div> <!-- end .dashboard-wrapper -->
 
-<!-- SCRIPTS -->
-<!-- Bootstrap JS Bundle (including Popper for tabs) -->
+<!-- Include Bootstrap JS Bundle (including Popper for tabs) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <!-- Chart.js (used in other tabs) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+
 <!-- D3.js for the Approach visualization -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 {% endblock %}
