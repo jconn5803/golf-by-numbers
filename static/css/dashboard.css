@@ -1,0 +1,240 @@
+/************************************************
+  Main Wrapper 
+*************************************************/
+.dashboard-wrapper {
+    background-color: #fff; /* White or near-white to match your homepage */
+    padding: 1.5rem;       /* Some spacing around the content */
+    border-radius: 10px;   /* Slight rounding if you want a "card" look around everything */
+  }
+  
+  /************************************************
+    Secondary Navbar (top "Dashboard Options")
+  *************************************************/
+  /* Navbar styling */
+.custom-navbar {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Nav Links - Modern, Subtle Buttons */
+/* Navbar styling */
+.custom-navbar {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Base Nav Links - Outlined Yellow Buttons */
+.custom-nav-link {
+  display: inline-block;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 16px;
+  margin: 0 8px;
+  color: black;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover Effect - Yellow Background */
+.custom-nav-link:hover {
+  background: #ffc107;
+  color: black;
+  border-color: #ffc107;
+  transform: scale(1.05);
+}
+
+/* Active Click Effect */
+.custom-nav-link:active {
+  transform: scale(0.98);
+}
+
+/* Special Styling for "Add Round" - Solid Yellow */
+.custom-nav-primary {
+  background: #ffc107;
+  color: black;
+  border-color: #ffc107;
+}
+
+/* Hover Effect for Add Round */
+.custom-nav-primary:hover {
+  background: #e0a800;
+  border-color: #e0a800;
+}
+
+
+  
+  /************************************************
+    Filter Form
+  *************************************************/
+  .dashboard-filter .form-label {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .dashboard-filter .form-control {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  
+  .dashboard-filter .form-control:focus {
+    outline: none;
+    border-color: #ffd85e; /* Accent color for focus */
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+  }
+  
+  /* CTA-style filter button */
+  .btn.btn-cta {
+    background-color: #ffc107;  /* The bright yellow from your homepage */
+    color: #000;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+  }
+  .btn.btn-cta:hover {
+    background-color: #e0a800; /* Slightly darker on hover */
+    color: #fff;
+  }
+  
+  /************************************************
+    Nav Tabs
+  *************************************************/
+  .dashboard-tabs {
+    border-bottom: 2px solid #ccc;
+  }
+  
+  .dashboard-tabs .nav-link {
+    border: none;
+    color: #555;
+    font-weight: 500;
+    border-radius: 0;
+    margin-right: 0.5rem;
+    transition: color 0.2s, background-color 0.2s;
+  }
+  
+  .dashboard-tabs .nav-link:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .dashboard-tabs .nav-link.active {
+    color: #000;
+    font-weight: 600;
+    border-bottom: 3px solid #ffc107; /* Accent color underline */
+    background-color: transparent;
+  }
+  
+  /************************************************
+    Tab Content
+  *************************************************/
+  .dashboard-tab-content {
+    margin-top: 1rem;
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Light, subtle shadow */
+  }
+  
+  /************************************************
+    Cards
+  *************************************************/
+  .card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  }
+  
+  .card .card-subtitle {
+    color: #999 !important;
+  }
+  
+  /************************************************
+    Fairway Container (Tee Tab)
+  *************************************************/
+  #fairwayContainer {
+    position: relative;
+    width: 100%;
+    max-width: 600px;       
+    height: 300px;          
+    background: linear-gradient(180deg, #3b945e 0%, #2e7d32 100%);
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 1em;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  #fairwayContainer:hover {
+    box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+  }
+  
+  #fairwayContainer > div {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+  }
+  
+  /* Left miss (red tint) */
+  #leftMissSection {
+    background-color: rgba(255, 0, 0, 0.25);
+    left: 0;
+  }
+  #leftMissSection:hover {
+    background-color: rgba(255, 0, 0, 0.4);
+  }
+  
+  /* Center/fairway (white tint) */
+  #centerHitSection {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+  #centerHitSection:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+  
+  /* Right miss (red tint) */
+  #rightMissSection {
+    background-color: rgba(255, 0, 0, 0.25);
+  }
+  #rightMissSection:hover {
+    background-color: rgba(255, 0, 0, 0.4);
+  }
+  
+  /************************************************
+    D3 Tooltip
+  *************************************************/
+  .d3-tooltip {
+    background-color: rgba(0,0,0,0.7) !important;
+    color: #fff !important;
+    padding: 0.5rem !important;
+    border-radius: 4px !important;
+    font-size: 0.85rem !important;
+    pointer-events: none;
+  }
+  
+  /************************************************
+    Chart Headings 
+  *************************************************/
+  h5 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #333;
+  }
+  

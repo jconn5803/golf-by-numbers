@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Add Shots{% endblock %}
+
+{% block extra_css %}
+  <!-- Page-specific CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/add_shots.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-center mb-4">Add Shots for Round</h2>
+
+  <!-- Wrap entire form in a narrower custom container -->
+  <form method="POST" id="add-shots-form" class="custom-form p-4">
+    
+    {% for hole in holes %}
+      <div class="shot-section mb-4">
+        <!-- Shot Section Header -->
+        <div class="shot-section-header">
+          Hole {{ hole.number }} - Par {{ hole.par }}
+        </div>
+
+        <!-- Shot Section Body -->
+        <div class="shot-section-body">
+          <div 
+            id="hole_{{ hole.number }}_shots" 
+            class="shots-container"
+          >
+            <!-- Prefill the first shot's distance -->
+            <div 
+              class="shot-card mb-3" 
+              id="hole_{{ hole.number }}_shot_1"
+            >
+              <h5 class="shot-title">Shot #1</h5>
+              <div class="mb-3">
+                <label 
+                  for="hole_{{ hole.number }}_shot_1_distance" 
+                  class="form-label custom-form-label"
+                >
+                  Distance (yards):
+                </label>
+                <input 
+                  type="number" 
+                  class="form-control custom-form-input" 
+                  name="hole_{{ hole.number }}_shot_1_distance" 
+                  id="hole_{{ hole.number }}_shot_1_distance" 
+                  value="{{ hole.distance }}" 
+                  required
+                >
+              </div>
+              <div class="mb-3">
+                <label 
+                  for="hole_{{ hole.number }}_shot_1_lie" 
+                  class="form-label custom-form-label"
+                >
+                  Lie:
+                </label>
+                <select 
+                  class="form-select custom-form-select" 
+                  name="hole_{{ hole.number }}_shot_1_lie" 
+                  id="hole_{{ hole.number }}_shot_1_lie" 
+                  required 
+                  onchange="updateMissDirection({{ hole.number }}, 1, {{ hole.par }})"
+                >
+                  <option value="Tee" selected>Tee</option>
+                  <option value="Fairway">Fairway</option>
+                  <option value="Rough">Rough</option>
+                  <option value="Bunker">Bunker</option>
+                  <option value="Recovery">Recovery</option>
+                  <option value="Green">Green</option>
+                </select>
+              </div>
+
+              <!-- Penalty Checkboxes -->
+              <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
+                <div class="form-check">
+                  <input 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    name="hole_{{ hole.number }}_shot_1_out_of_bounds" 
+                    id="hole_{{ hole.number }}_shot_1_out_of_bounds" 
+                    value="1"
+                    onchange="addDummyShot({{ hole.number }}, 1, 'OOB', {{ hole.par }})"
+                  >
+                  <label 
+                    for="hole_{{ hole.number }}_shot_1_out_of_bounds" 
+                    class="form-check-label"
+                  >
+                    Out of Bounds
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    name="hole_{{ hole.number }}_shot_1_hazard" 
+                    id="hole_{{ hole.number }}_shot_1_hazard" 
+                    value="1"
+                    onchange="addDummyShot({{ hole.number }}, 1, 'hazard', {{ hole.par }})"
+                  >
+                  <label 
+                    for="hole_{{ hole.number }}_shot_1_hazard" 
+                    class="form-check-label"
+                  >
+                    Hazard/Unplayable
+                  </label>
+                </div>
+              </div>
+
+              <!-- Remove button (hidden by default, see JS) -->
+              <button 
+                type="button"
+                class="btn btn-outline-danger btn-sm remove-shot-btn"
+                onclick="removeShot({{ hole.number }}, 1)"
+              >
+                Remove Shot
+              </button>
+            </div><!-- End .shot-card -->
+          </div><!-- End .shots-container -->
+
+          <!-- Button to add more shots -->
+          <button
+            type="button"
+            class="btn btn-outline-dark"
+            onclick="addShot({{ hole.number }}, {{ hole.par }})"
+          >
+            Add Shot
+          </button>
+        </div><!-- End .shot-section-body -->
+      </div><!-- End .shot-section -->
+    {% endfor %}
+
+    <!-- Submit all holes/shots -->
+    <div class="text-center mt-3">
+      <button type="submit" class="btn btn-cta px-4">
+        Submit
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{{ url_for('static', filename='js/shot_entry_form.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}My Rounds{% endblock %}
+
+{% block extra_css %}
+  <!-- If you have page-specific CSS, include it here -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/my_rounds.css') }}">
+{% endblock %}
+
+
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">My Rounds</h1>
+
+  <!-- Display flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if rounds %}
+    <!-- Custom Table Wrapper -->
+    <div class="custom-table-wrapper">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Date Played</th>
+            <th>Course</th>
+            <th>Tee</th>
+            <th>Score</th>
+            <th>Score to Par</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for round in rounds %}
+            <tr>
+              <td>{{ round.date_played.strftime('%Y-%m-%d') }}</td>
+              <td>{{ round.course.name }}</td>
+              <td>{{ round.tee.name }}</td>
+              <td>{{ round.score }}</td>
+              <td>{{ round.score_to_par }}</td>
+              <td>
+                <!-- Delete form for each round -->
+                <form 
+                  method="POST" 
+                  action="{{ url_for('my_rounds') }}"
+                  onsubmit="return confirm('Are you sure you want to delete this round?');"
+                  class="d-inline"
+                >
+                  <input type="hidden" name="round_id" value="{{ round.roundID }}">
+                  <button 
+                    type="submit" 
+                    class="btn btn-outline-danger btn-sm"
+                  >
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>You haven't entered any rounds yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

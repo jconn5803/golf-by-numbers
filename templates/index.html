@@ -1,152 +1,62 @@
 {% extends "base.html" %}
 
-{% block title %}Strokes Gained Calculator{% endblock %}
-
-{% block content %}
-<div class="card border-primary shadow-lg rounded p-4">
-    <div class="card-body">
-        <h1 class="text-center text-primary mb-4">Strokes Gained Calculator</h1>
-        <form id="calculator-form" action="/" method="POST" class="row g-4">
-
-            <!-- Lie Before -->
-            <div class="col-md-6">
-                <label for="before_lie" class="form-label fw-bold">Lie before shot:</label>
-                <select class="form-select border-primary" id="before_lie" name="before_lie" required>
-                    <option value="Tee" {% if before_lie == 'Tee' %}selected{% endif %}>Tee</option>
-                    <option value="Fairway" {% if before_lie == 'Fairway' %}selected{% endif %}>Fairway</option>
-                    <option value="Rough" {% if before_lie == 'Rough' %}selected{% endif %}>Rough</option>
-                    <option value="Bunker" {% if before_lie == 'Bunker' %}selected{% endif %}>Bunker</option>
-                    <option value="Recovery" {% if before_lie == 'Recovery' %}selected{% endif %}>Recovery</option>
-                    <option value="Green" {% if before_lie == 'Green' %}selected{% endif %}>Green</option>
-                </select>
-            </div>
-
-            <!-- Distance Before -->
-            <div class="col-md-6">
-                <label for="before_distance" class="form-label fw-bold" id="before-distance-label">Distance to hole before shot ({{ 'Metres' if unit == 'metres' else 'Yards' }})</label>
-                <input type="number" step="any" class="form-control border-primary" id="before_distance" name="before_distance" 
-                       value="{{ before_distance if before_distance is not none else '' }}" required>
-                {% if errors.before_distance %}
-                <div class="text-danger">{{ errors.before_distance }}</div>
-                {% endif %}
-            </div>
-
-            <!-- Lie After -->
-            <div class="col-md-6">
-                <label for="after_lie" class="form-label fw-bold">Lie after shot:</label>
-                <select class="form-select border-primary" id="after_lie" name="after_lie" required>
-                    <option value="Tee" {% if after_lie == 'Tee' %}selected{% endif %}>Tee</option>
-                    <option value="Fairway" {% if after_lie == 'Fairway' %}selected{% endif %}>Fairway</option>
-                    <option value="Rough" {% if after_lie == 'Rough' %}selected{% endif %}>Rough</option>
-                    <option value="Bunker" {% if after_lie == 'Bunker' %}selected{% endif %}>Bunker</option>
-                    <option value="Recovery" {% if after_lie == 'Recovery' %}selected{% endif %}>Recovery</option>
-                    <option value="Green" {% if after_lie == 'Green' %}selected{% endif %}>Green</option>
-                    <option value="In the Hole" {% if after_lie == 'In the Hole' %}selected{% endif %}>In the Hole</option>
-                </select>
-            </div>
-
-            <!-- Distance After -->
-            <div class="col-md-6">
-                <label for="after_distance" class="form-label fw-bold" id="after-distance-label">Distance to hole after shot ({{ 'Metres' if unit == 'metres' else 'Yards' }})</label>
-                <input type="number" step="any" class="form-control border-primary" id="after_distance" name="after_distance" 
-                       value="{{ after_distance if after_distance is not none else '' }}" required>
-                {% if errors.after_distance %}
-                <div class="text-danger">{{ errors.after_distance }}</div>
-                {% endif %}
-            </div>
-
-            <!-- Penalty Section -->
-            <div class="col-12">
-                <label class="form-check-label fw-bold">
-                    <input type="checkbox" id="penalty" name="penalty" value="1" class="form-check-input" {% if penalty %}checked{% endif %}> Penalty incurred
-                </label>
-            </div>
-
-            <div class="col-12 ms-4" id="penalty-options" style="display: none;">
-                <label class="form-check-label">
-                    <input type="checkbox" id="oob" name="oob" value="1" class="form-check-input" {% if oob %}checked{% endif %}> OOB / Lost Ball
-                </label>
-                <label class="form-check-label ms-4">
-                    <input type="checkbox" id="hazard" name="hazard" value="1" class="form-check-input" {% if hazard %}checked{% endif %}> Hazard / Unplayable
-                </label>
-            </div>
-
-            <!-- Buttons and Unit Toggle -->
-<div class="col-12 d-flex justify-content-between align-items-center">
-    <div class="d-flex gap-3">
-        <button type="submit" class="btn btn-primary px-4">Calculate</button>
-        <button type="button" id="clear-button" class="btn btn-outline-secondary px-4">Clear</button>
-    </div>
-    <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" id="unit-toggle" name="unit" value="metres" {% if unit == 'metres' %}checked{% endif %}>
-        <label class="form-check-label" for="unit-toggle" id="unit-label">Yards | Metres</label>
-    </div>
-</div>
-        </form>
-    </div>
-</div>
-
-{% if sg is not none %}
-<div class="alert mt-4 text-center shadow-lg rounded p-4" style="background-color: {{ sg_color }}; color: white; max-width: 400px; margin: 0 auto;">
-    <h4 class="m-0 fw-bold">
-        Your calculated strokes gained: <strong>{{ "+" if sg > 0 else "" }}{{ sg }}</strong>
-    </h4>
-</div>
-{% endif %}
-
-
-<script src="{{ url_for('static', filename='js/penalty_toggle.js') }}"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Clear form and reset penalty options
-        document.getElementById("clear-button").addEventListener("click", function() {
-            document.getElementById("calculator-form").reset();
-            document.getElementById("penalty-options").style.display = "none";
-            document.getElementById("after_distance").disabled = false;
-        });
-
-        // Update labels and handle "In the Hole" logic
-        function updateLabels() {
-            const unitToggle = document.getElementById("unit-toggle");
-            const beforeLie = document.getElementById("before_lie").value;
-            const afterLie = document.getElementById("after_lie").value;
-
-            const beforeDistanceLabel = document.getElementById("before-distance-label");
-            const afterDistanceLabel = document.getElementById("after-distance-label");
-            const afterDistanceInput = document.getElementById("after_distance");
-
-            // Update distance labels based on unit and lie
-            if (unitToggle.checked) {
-                beforeDistanceLabel.textContent = "Distance to hole before shot (Metres)";
-                afterDistanceLabel.textContent = "Distance to hole after shot (Metres)";
-            } else {
-                beforeDistanceLabel.textContent =
-                    beforeLie === "Green" ? "Distance to hole before shot (Feet)" : "Distance to hole before shot (Yards)";
-                afterDistanceLabel.textContent =
-                    afterLie === "Green" ? "Distance to hole after shot (Feet)" : "Distance to hole after shot (Yards)";
-            }
-
-            // Disable after_distance if "In the Hole" is selected
-            if (afterLie === "In the Hole") {
-                afterDistanceInput.value = 0;
-                afterDistanceInput.disabled = true;
-            } else {
-                afterDistanceInput.disabled = false;
-            }
-        }
-
-        // Event listeners for unit toggle and lie changes
-        document.getElementById("unit-toggle").addEventListener("change", updateLabels);
-        document.getElementById("before_lie").addEventListener("change", updateLabels);
-        document.getElementById("after_lie").addEventListener("change", updateLabels);
-
-        // Initial call to set labels
-        updateLabels();
-    });
-</script>
+{% block title %}
+Home - UnderParData
 {% endblock %}
 
+{% block extra_css %}
+  <!-- If you have page-specific CSS, include it here -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
 
+{% block content %}
 
+<!-- Hero Section -->
+<div class="hero-section">
+  <!-- Overlay for darkening the background image -->
+  <div class="hero-overlay"></div>
+  <div class="container hero-content">
+    <div class="row">
+      <div class="col-12 col-md-8">
+        <h1 class="hero-title">Strokes Gained Stats Tracking</h1>
+        <p class="hero-subtitle">Easy to use stat tracking system to identify strenghts and weaknesses in your game.</p>
+        <a href="/register" class="btn btn-cta">Get started now!</a>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- Below the Hero: Example Info Section -->
+<div class="container my-5">
+  <div class="row">
+    <div class="col-lg-6 d-flex align-items-top">
+      <div>
+        <h2 class="mb-3">Track Meaningful Stats</h2>
+        <p>Discover what you can do with our website:</p>
+          <ul>
+            <li><strong>Create an Account:</strong> Sign up and start entering your shot data from every round.</li>
+            <li><strong>Comprehensive Data Storage:</strong> All your rounds are securely stored in our database for easy access and long-term tracking.</li>
+            <li><strong>Custom Filtering Options:</strong> Filter your rounds by date range, round type, or golf course to quickly find the data you need.</li>
+            <li><strong>Strokes Gained Analysis:</strong> View overall strokes gained data to get a clear picture of your performance.</li>
+            <li><strong>Detailed Performance Insights:</strong> Dive deeper with breakdowns for off the tee shots, approach shots, short game, and putting.</li>
+          </ul>
+        <p>
+          <strong>Ready to learn more?</strong> Get started by
+          <a href="/register">creating an account.</a>
+        </p>
+        <a href="/register" class="btn btn-cta me-3">Get started now!</a>
+        <a href="/register" class="btn btn-cta me-3">Strokes Gained Calculator</a>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <img 
+        src="{{ url_for('static', filename='images/dashboard_ss.png') }}" 
+        class="img-fluid rounded shadow" 
+        alt="Dashboard Screenshot" 
+      />
+    </div>
+  </div>
+</div>
+</div>
 
+{% endblock %}
