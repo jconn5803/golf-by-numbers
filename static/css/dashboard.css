@@ -10,28 +10,65 @@
   /************************************************
     Secondary Navbar (top "Dashboard Options")
   *************************************************/
-  .dashboard-secondary-nav {
-    background-color: #fdfdfd; /* Light background */
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    border: 1px solid #eee; /* Subtle border to separate from background */
-  }
-  
-  .dashboard-secondary-nav .navbar-brand {
-    font-size: 1.25rem;
-    color: #333;
-  }
-  
-  .dashboard-secondary-nav .nav-link {
-    color: #555 !important;  
-    margin: 0 0.5rem;
-    transition: color 0.2s;
-  }
-  
-  .dashboard-secondary-nav .nav-link:hover {
-    color: #000 !important;
-    text-decoration: none;
-  }
+  /* Navbar styling */
+.custom-navbar {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Nav Links - Modern, Subtle Buttons */
+/* Navbar styling */
+.custom-navbar {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Base Nav Links - Outlined Yellow Buttons */
+.custom-nav-link {
+  display: inline-block;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 16px;
+  margin: 0 8px;
+  color: black;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover Effect - Yellow Background */
+.custom-nav-link:hover {
+  background: #ffc107;
+  color: black;
+  border-color: #ffc107;
+  transform: scale(1.05);
+}
+
+/* Active Click Effect */
+.custom-nav-link:active {
+  transform: scale(0.98);
+}
+
+/* Special Styling for "Add Round" - Solid Yellow */
+.custom-nav-primary {
+  background: #ffc107;
+  color: black;
+  border-color: #ffc107;
+}
+
+/* Hover Effect for Add Round */
+.custom-nav-primary:hover {
+  background: #e0a800;
+  border-color: #e0a800;
+}
+
+
   
   /************************************************
     Filter Form

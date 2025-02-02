@@ -206,19 +206,46 @@
    const borderColors = sgData.values.map(v => v >= 0 ? "rgba(0, 128, 0, 1)" : "rgba(255, 0, 0, 1)");
 
    sgChart = new Chart(sgChartCanvas, {
-     type: "bar",
-     data: {
-       labels: sgData.labels,
-       datasets: [{
-         label: "Avg Strokes Gained",
-         data: sgData.values,
-         backgroundColor: barColors,
-         borderColor: borderColors,
-         borderWidth: 1,
-       }],
-     },
-     options: { responsive: true, scales: { y: { beginAtZero: true } } }
-   });
+    type: "bar",
+    data: {
+      labels: sgData.labels,
+      datasets: [
+        {
+          data: sgData.values,
+          backgroundColor: barColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          ticks: {
+            font: {
+              size: 20, // Set this to your desired font size
+            },
+          },
+        },
+        y: {
+          beginAtZero: true,
+          ticks:{
+            font:{
+              size:18,
+            }
+          }
+        },
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+    },
+  });
+  
+  
 
    updateRoundPerformanceChart(params);
 

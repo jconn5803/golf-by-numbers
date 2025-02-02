@@ -12,37 +12,33 @@
 {% block content %}
 <div class="dashboard-wrapper">
   
-  <!-- SECONDARY NAVBAR -->
-<nav class="navbar border-0 bg-transparent mb-4 p-0">
-  <div class="container-fluid">
-    <ul class="nav">
-      <li class="nav-item">
-        <a class="nav-link fw-bold text-black me-3" href="{{ url_for('add_round') }}">
-          Add Round
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link fw-bold text-black me-3" href="{{ url_for('add_course') }}">
-          Add Course
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link fw-bold text-black me-3" href="{{ url_for('my_rounds') }}">
-          My Rounds
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link fw-bold text-black me-3" href="{{ url_for('courses') }}">
-          All Courses
-        </a>
-      </li>
-    </ul>
-  </div>
-</nav>
+  <h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
+  
+  <!-- Secondary navbar -->
+  <nav class="navbar custom-navbar">
+    <div class="container-fluid">
+      <ul class="nav">
+        <li class="nav-item">
+          <a class="nav-link custom-nav-link custom-nav-primary" href="{{ url_for('add_round') }}">Add Round</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link custom-nav-link" href="{{ url_for('add_course') }}">Add Course</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link custom-nav-link" href="{{ url_for('my_rounds') }}">My Rounds</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link custom-nav-link" href="{{ url_for('courses') }}">All Courses</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  
+  
 
   <!-- END SECONDARY NAVBAR -->
 
-  <h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
+  
 
   <!-- FILTER FORM -->
   <form id="filterForm" class="row row-cols-lg-auto g-3 align-items-end mb-4 dashboard-filter">
@@ -395,6 +391,7 @@
 <!-- Chart.js (used in other tabs) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
 <!-- D3.js for the Approach visualization -->
 <script src="https://d3js.org/d3.v7.min.js"></script>

@@ -29,29 +29,34 @@ Home - UnderParData
 <!-- Below the Hero: Example Info Section -->
 <div class="container my-5">
   <div class="row">
-    <div class="col-lg-6 d-flex align-items-center">
+    <div class="col-lg-6 d-flex align-items-top">
       <div>
-        <h2 class="mb-3"></h2>
-        <p>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse tempus quam non varius
-          vehicula. Praesent sodales arcu turpis, eget consequat sapien viverra ac.
-        </p>
+        <h2 class="mb-3">Track Meaningful Stats</h2>
+        <p>Discover what you can do with our website:</p>
+          <ul>
+            <li><strong>Create an Account:</strong> Sign up and start entering your shot data from every round.</li>
+            <li><strong>Comprehensive Data Storage:</strong> All your rounds are securely stored in our database for easy access and long-term tracking.</li>
+            <li><strong>Custom Filtering Options:</strong> Filter your rounds by date range, round type, or golf course to quickly find the data you need.</li>
+            <li><strong>Strokes Gained Analysis:</strong> View overall strokes gained data to get a clear picture of your performance.</li>
+            <li><strong>Detailed Performance Insights:</strong> Dive deeper with breakdowns for off the tee shots, approach shots, short game, and putting.</li>
+          </ul>
         <p>
           <strong>Ready to learn more?</strong> Get started by
-          <a href="/register">creating an account</a> or take a look at our
-          <a href="/about">About Us</a> page for more information.
+          <a href="/register">creating an account.</a>
         </p>
+        <a href="/register" class="btn btn-cta me-3">Get started now!</a>
+        <a href="/register" class="btn btn-cta me-3">Strokes Gained Calculator</a>
       </div>
     </div>
     <div class="col-lg-6">
-      <!-- Replace with a relevant image (or remove if you prefer text-only) -->
       <img 
-        src="{{ url_for('static', filename='images/medical-team.jpg') }}" 
+        src="{{ url_for('static', filename='images/dashboard_ss.png') }}" 
         class="img-fluid rounded shadow" 
-        alt="Medical Team" 
+        alt="Dashboard Screenshot" 
       />
     </div>
   </div>
+</div>
 </div>
 
 {% endblock %}
