@@ -2,39 +2,65 @@
 
 {% block title %}Login - Golf By Numbers{% endblock %}
 
+{% block extra_css %}
+  <!-- If you have page-specific CSS, include it here -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-lg rounded">
-                <div class="card-header bg-primary text-white text-center">
-                    <h4>Welcome Back</h4>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('login') }}">
-                        <!-- Email -->
-                        <div class="mb-3">
-                            <label for="email" class="form-label fw-bold">Email</label>
-                            <input type="email" name="email" id="email" class="form-control" required placeholder="Enter your email">
-                        </div>
+  <h1 class="text-center mb-4">Welcome Back</h1>
 
-                        <!-- Password -->
-                        <div class="mb-3">
-                            <label for="password" class="form-label fw-bold">Password</label>
-                            <input type="password" name="password" id="password" class="form-control" required placeholder="Enter your password">
-                        </div>
-
-                        <!-- Submit Button -->
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Log In</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer text-center">
-                    <p>Don't have an account? <a href="{{ url_for('register') }}">Sign up here</a></p>
-                </div>
-            </div>
-        </div>
+  <!-- Custom form wrapper with box styling -->
+  <form 
+    method="POST" 
+    action="{{ url_for('login') }}" 
+    class="custom-form p-4 mx-auto"
+    style="max-width: 600px;"
+  >
+    <!-- Email -->
+    <div class="mb-3">
+      <label for="email" class="form-label custom-form-label">Email</label>
+      <input 
+        type="email" 
+        name="email" 
+        id="email" 
+        class="form-control custom-form-input" 
+        required 
+        placeholder="Enter your email"
+      >
     </div>
+
+    <!-- Password -->
+    <div class="mb-4">
+      <label for="password" class="form-label custom-form-label">Password</label>
+      <input 
+        type="password" 
+        name="password" 
+        id="password" 
+        class="form-control custom-form-input" 
+        required 
+        placeholder="Enter your password"
+      >
+    </div>
+
+    <!-- Submit Button -->
+    <div class="text-center">
+      <button 
+        type="submit" 
+        class="btn btn-cta px-4"
+      >
+        Log In
+      </button>
+    </div>
+  </form>
+
+  <!-- Footer Text -->
+  <div class="text-center mt-3">
+    <p>
+      Don't have an account? 
+      <a href="{{ url_for('register') }}">Sign up here</a>
+    </p>
+  </div>
 </div>
 {% endblock %}
