@@ -6,7 +6,7 @@ class Course(db.Model):
     __tablename__ = 'courses'
 
     courseID = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
+    name = db.Column(db.String(120), nullable=False, unique=False)
     location = db.Column(db.String(200))
 
     # Relationships
