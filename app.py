@@ -300,7 +300,7 @@ def add_shots(roundID):
                 # Code to specify what happens if OOB selected
                 if out_of_bounds:
                     lie_after = "OOB" # Condtion already written into SG function 
-                    distance_after = distance # Stil the same distance away
+                    distance_after = distance # Still the same distance away
                     sg = SG_calculator(distance, lie, distance_after, lie_after)
                     hole_penalty_shots += 1
                 else:
@@ -319,8 +319,9 @@ def add_shots(roundID):
 
                 if hazard:
                     sg -= 1 # Subtract 1 if end up in a hazard
-                    num_shots += 1
                     hole_penalty_shots += 1
+                    lie_after = "Hazard" # Change the lie_after to Hazard after SG calculation so that not captured as an "IN PLAY" shot
+
                 
                 miss_direction = request.form.get(
                     f"hole_{hole.number}_shot_{num_shots}_miss_direction",
@@ -798,7 +799,7 @@ def tee_stats():
         total_shots_lie += count_lie
 
     # We only want the sum of these categories
-    relevant_lies = ["Fairway", "Bunker", "Rough", "Green", "In the Hole"]
+    relevant_lies = ["Fairway", "Bunker", "Rough", "Green", "In the Hole"] # Hazard, OOB and Recovery omitted
     relevant_shot_sum = 0
 
     for lie_key, count_val in final_lie_counts.items():
