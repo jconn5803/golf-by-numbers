@@ -220,7 +220,7 @@ def add_holes(tee_id):
         db.session.commit()
 
         # 6) Redirect to wherever you’d like after saving
-        return redirect('/courses')
+        return redirect('/add_round')
 
     # If GET, just render the add_holes form
     return render_template('add_holes.html', tee=tee)
@@ -404,6 +404,32 @@ def add_shots(roundID):
         return redirect('/dashboard')
 
     return render_template('add_shots.html', round_data=round_data, course=course, tee_id=tee_id, holes=holes)
+
+# Route where the user's rounds are stored
+@app.route('/my_rounds', methods=['GET', 'POST'])
+@login_required
+def my_rounds():
+    if request.method == 'POST':
+        # Get the round ID from the submitted form
+        round_id = request.form.get('round_id')
+        if round_id:
+            # Verify the round belongs to the current user
+            round_to_delete = Round.query.filter_by(roundID=round_id, userID=current_user.userID).first()
+            if round_to_delete:
+                # Delete the round.
+                # With cascade="all, delete-orphan" in your relationships,
+                # all related Shots and HoleStats will be deleted automatically.
+                db.session.delete(round_to_delete)
+                db.session.commit()
+                flash("Round and all associated shots and hole stats deleted successfully.", "success")
+            else:
+                flash("Round not found or not authorized.", "danger")
+        return redirect(url_for('my_rounds'))
+
+    # For GET requests, fetch all rounds for the current user (newest first)
+    rounds = Round.query.filter_by(userID=current_user.userID).order_by(Round.date_played.desc()).all()
+    return render_template('my_rounds.html', rounds=rounds)
+
 
 
 
