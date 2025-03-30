@@ -27,16 +27,18 @@ import os
 from dotenv import load_dotenv
 import stripe
 
+from config import DevelopmentConfig, ProductionConfig  # or ProductionConfig for production
+
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key_here"
-app.config.from_object(Config)
+app.config.from_object(DevelopmentConfig)  # Use ProductionConfig in production
 
-# Initialize the database
+# Initialize your database and migrations after configuration is set.
 init_app(app)
 migrate = Migrate(app, db)
+
 
 # Initialse the flask login 
 login_manager = LoginManager()
@@ -106,7 +108,7 @@ def login():
 
         # Log the user in
         login_user(user)
-        return redirect('/')
+        return redirect('/dashboard')
 
     return render_template('login.html')
 
