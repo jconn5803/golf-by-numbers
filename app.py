@@ -33,7 +33,7 @@ from config import DevelopmentConfig, ProductionConfig  # or ProductionConfig fo
 load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(ProductionConfig)  # Use ProductionConfig in production
+app.config.from_object(DevelopmentConfig)  # Use ProductionConfig in production
 
 # Initialize your database and migrations after configuration is set.
 init_app(app)
@@ -45,9 +45,138 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'  # Redirect users to the login page if not logged in
 
+# Stripe api keys
+stripe_keys = {
+    "secret_key": os.environ["STRIPE_SECRET_KEY"],
+    "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
+    "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"],
+    "price_id": os.environ["STRIPE_MONTHLY_PRICE_ID"],
+    "annual_price_id": os.environ["STRIPE_ANNUAL_PRICE_ID"],
+}
+
+stripe.api_key = stripe_keys["secret_key"]
+
 @login_manager.user_loader
 def load_user(userID):
     return User.query.get(int(userID))
+
+
+# Recurring Payment Demo Page
+@app.route("/recurring_payment_demo")
+def recurring_payment_demo():
+    return render_template("recurring_payment_demo.html")
+
+# Recurring Payment Demo Page
+@app.route("/recurring_payment_demo_success")
+def recurring_payment_demo_success():
+    return render_template("recurring_payment_demo_success.html")
+
+# Recurring Payment Demo Page
+@app.route("/recurring_payment_demo_cancelled")
+def recurring_payment_demo_cancelled():
+    return render_template("recurring_payment_demo_cancelled.html")
+
+
+@app.route("/config")
+def get_publishable_key():
+    stripe_config = {"publicKey": stripe_keys["publishable_key"]}
+    return jsonify(stripe_config)
+
+@app.route("/create-checkout-session")
+def create_checkout_session():
+
+    # Get the product type from the query string; default to "monthly"
+    product_type = request.args.get("product_type", "monthly")
+    
+    # Choose the price ID based on the product type
+    if product_type == "annual":
+        price_id = stripe_keys["annual_price_id"]
+    else: # This is monthly
+        price_id = stripe_keys["price_id"]
+
+    domain_url = "http://127.0.0.1:5000/recurring_payment_demo"
+    stripe.api_key = stripe_keys["secret_key"]
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            # you should get the user id here and pass it along as 'client_reference_id'
+            #
+            # this will allow you to associate the Stripe session with
+            # the user saved in your database
+            #
+            # example: client_reference_id=user.id,
+            client_reference_id=current_user.get_id(),
+            success_url=domain_url + "_success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=domain_url + "_cancel",
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[
+                {
+                    "price": price_id,
+                    "quantity": 1,
+                }
+            ]
+        )
+        return jsonify({"sessionId": checkout_session["id"]})
+    except Exception as e:
+        return jsonify(error=str(e)), 403
+
+
+
+@app.route("/stripe-webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature")
+    print(sig_header)
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, stripe_keys["endpoint_secret"]
+        )
+
+    except ValueError as e:
+        # Invalid payload
+        return "Invalid payload", 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        return "Invalid signature", 400
+
+    # Handle the checkout.session.completed event
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+
+        # Fulfill the purchase...
+        handle_checkout_session(session)
+
+    return "Success", 200
+
+
+
+def handle_checkout_session(session):
+    # Retrieve the user ID from the checkout session.
+    # Ensure you pass the client_reference_id when creating the checkout session.
+    user_id = session.get("client_reference_id")
+    if not user_id:
+        print("No client_reference_id found in session.")
+        return
+
+    # Fetch the user from your database.
+    user = User.query.get(int(user_id))
+    if not user:
+        print(f"User with id {user_id} not found.")
+        return
+
+    # Update the user's subscription details using data from the Stripe session.
+    # The 'customer' field holds the Stripe customer ID.
+    # The 'subscription' field holds the subscription ID (or plan details if needed).
+    user.stripe_customer_id = session.get("customer")
+    user.subscription_active = True
+    user.subscription_plan = session.get("subscription")  # Optionally, retrieve more details via Stripe API if needed
+
+    # Commit the changes to the database.
+    db.session.commit()
+    print("User subscription details updated successfully.")
+
 
 
 @app.route('/')

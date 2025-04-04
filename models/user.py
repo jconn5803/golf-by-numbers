@@ -5,7 +5,7 @@ from flask_login import UserMixin
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
 
-    userID = db.Column(db.Integer, primary_key=True)
+    userID = db.Column(db.Integer, primary_key=True, unique=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
@@ -25,3 +25,4 @@ class User(UserMixin, db.Model):
     def get_id(self):
         """Return the unique ID for the user as a string."""
         return str(self.userID)
+    
