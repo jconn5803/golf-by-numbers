@@ -133,6 +133,7 @@ def stripe_webhook():
         event = stripe.Webhook.construct_event(
             payload, sig_header, stripe_keys["endpoint_secret"]
         )
+        data = event['data']
 
     except ValueError as e:
         # Invalid payload
@@ -148,8 +149,38 @@ def stripe_webhook():
         # Fulfill the purchase...
         handle_checkout_session(session)
 
-    return "Success", 200
+    elif event["type"] == "invoice.paid":
+        invoice = event["data"]["object"]
+        # Retrieve the customer ID from the invoice.
+        customer_id = invoice.get("customer")
+        # Look up the user by their Stripe customer ID.
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Mark the subscription as active (1).
+            user.subscription_active = True
+            db.session.commit()
+            print("Invoice paid: Subscription active for user", user.get_id())
+        else:
+            print("Invoice paid: No user found for customer", customer_id)
 
+
+    elif event["type"] == "invoice.payment_failed":
+        invoice = event["data"]["object"]
+        customer_id = invoice.get("customer")
+        # Look up the user by their Stripe customer ID.
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Mark the subscription as inactive (0).
+            user.subscription_active = False
+            db.session.commit()
+            print("Invoice payment failed: Subscription inactive for user", user.get_id())
+        else:
+            print("Invoice payment failed: No user found for customer", customer_id)
+
+    else:
+        print("Unhandled event type {}".format(event["type"]))
+
+    return "Success", 200
 
 
 def handle_checkout_session(session):
