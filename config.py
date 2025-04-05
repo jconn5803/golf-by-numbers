@@ -18,6 +18,7 @@ class DevelopmentConfig(Config):
     STRIPE_ENDPOINT_SECRET=os.getenv("STRIPE_ENDPOINT_SECRET")
     STRIPE_MONTHLY_PRICE_ID=os.getenv("STRIPE_MONTHLY_PRICE_ID")
     STRIPE_ANNUAL_PRICE_ID=os.getenv("STRIPE_ANNUAL_PRICE_ID")
+    STRIPE_DAILY_PRICE_ID=os.getenv("STRIPE_DAILY_PRICE_ID")
 
 class ProductionConfig(Config):
     DEBUG = False  # Ensure debug is off in production

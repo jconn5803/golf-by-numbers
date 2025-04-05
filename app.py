@@ -52,6 +52,7 @@ stripe_keys = {
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"],
     "price_id": os.environ["STRIPE_MONTHLY_PRICE_ID"],
     "annual_price_id": os.environ["STRIPE_ANNUAL_PRICE_ID"],
+    "daily_price_id": os.environ["STRIPE_DAILY_PRICE_ID"],
 }
 
 stripe.api_key = stripe_keys["secret_key"]
@@ -85,12 +86,16 @@ def get_publishable_key():
 @app.route("/create-checkout-session")
 def create_checkout_session():
 
+    
+
     # Get the product type from the query string; default to "monthly"
     product_type = request.args.get("product_type", "monthly")
     
     # Choose the price ID based on the product type
     if product_type == "annual":
         price_id = stripe_keys["annual_price_id"]
+    if product_type == "daily":
+        price_id = stripe_keys["daily_price_id"]
     else: # This is monthly
         price_id = stripe_keys["price_id"]
 
@@ -176,6 +181,20 @@ def stripe_webhook():
             print("Invoice payment failed: Subscription inactive for user", user.get_id())
         else:
             print("Invoice payment failed: No user found for customer", customer_id)
+
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        customer_id = subscription.get("customer")
+        # Look up the user by their Stripe customer ID.
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Mark the subscription as inactive and remove the subscription plan.
+            user.subscription_active = False
+            user.subscription_plan = None
+            db.session.commit()
+            print("Subscription deleted: Updated user", user.get_id())
+        else:
+            print("Subscription deleted: No user found for customer", customer_id)
 
     else:
         print("Unhandled event type {}".format(event["type"]))

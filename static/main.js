@@ -25,4 +25,14 @@ fetch("/config")
           console.log(res);
         });
     });
+    // Event listener for the annual subscription button
+    document.querySelector("#dailyBtn").addEventListener("click", () => {
+      fetch("/create-checkout-session?product_type=daily")
+        .then((result) => result.json())
+        .then((data) => stripe.redirectToCheckout({ sessionId: data.sessionId }))
+        .then((res) => {
+          console.log(res);
+        });
+    });
   });
+   
