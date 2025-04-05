@@ -61,6 +61,17 @@ stripe.api_key = stripe_keys["secret_key"]
 def load_user(userID):
     return User.query.get(int(userID))
 
+# Custom wrapper function to make sure that a user is subscribed
+def subscription_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if the user is logged in and has an active subscription
+        if not current_user.is_authenticated or not current_user.subscription_active:
+            flash("You need an active subscription to access this page.", "warning")
+            return redirect(url_for('recurring_payment_demo'))  # 'subscribe' is the route for subscription info
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 # Recurring Payment Demo Page
 @app.route("/recurring_payment_demo")
@@ -617,6 +628,7 @@ def my_rounds():
 
 @app.route('/dashboard')
 @login_required
+@subscription_required
 def dashboard():
     """
     Renders the main dashboard page with filters and placeholder for charts/cards.
