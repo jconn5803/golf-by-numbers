@@ -49,9 +49,14 @@ document.addEventListener("DOMContentLoaded", updateDashboard);
 //────────────────────────────
 
 async function updateRoundPerformanceChart(params) {
+  // Fetch rounds data.
   const roundRes = await fetch(`/api/rounds?${params.toString()}`);
-  const roundData = await roundRes.json();
+  let roundData = await roundRes.json();
 
+  // Sort rounds chronologically by date_played.
+  roundData.sort((a, b) => new Date(a.date_played) - new Date(b.date_played));
+
+  // Create labels (using "Round {roundID}") in sorted order.
   const labels = roundData.map(r => `Round ${r.roundID}`);
   const scores = roundData.map(r => r.score_to_par);
   const tooltips = roundData.map(r => ({
@@ -60,72 +65,144 @@ async function updateRoundPerformanceChart(params) {
     score: r.score_to_par
   }));
 
-  if (roundPerformanceChart) {
-    roundPerformanceChart.destroy();
-  }
+  // Remove any existing SVG.
+  const container = d3.select(roundPerformanceCanvas);
+  container.select("svg").remove();
 
-  roundPerformanceChart = new Chart(roundPerformanceCanvas, {
-    type: "line",
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "Score to Par",
-        data: scores,
-        borderColor: "rgba(75, 192, 192, 1)",
-        backgroundColor: "rgba(75, 192, 192, 0.2)",
-        borderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        pointBackgroundColor: "rgba(75, 192, 192, 1)"
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        tooltip: {
-          callbacks: {
-            title: (context) => {
-              const index = context[0].dataIndex;
-              return `Course: ${tooltips[index].course}`;
-            },
-            label: (context) => {
-              const index = context.dataIndex;
-              return [
-                `Date Played: ${tooltips[index].date}`,
-                `Score: ${tooltips[index].score}`
-              ];
-            }
-          }
-        },
-        annotation: {
-          annotations: {
-            zeroLine: {
-              type: 'line',
-              yMin: 0,
-              yMax: 0,
-              borderColor: 'red',
-              borderDash: [5, 5],
-              borderWidth: 2,
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Rounds Played"
-          },
-          ticks: { display: false }
-        },
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: "Score to Par" }
-        }
-      }
-    }
-  });
+  // Define margins and dimensions.
+  const margin = { top: 20, right: 30, bottom: 50, left: 50 };
+  const containerWidth = container.node().clientWidth || 400;
+  const width = containerWidth - margin.left - margin.right;
+  const height = 300 - margin.top - margin.bottom;
+
+  // Create the SVG container.
+  const svg = container.append("svg")
+    .attr("width", containerWidth)
+    .attr("height", height + margin.top + margin.bottom)
+    .attr("viewBox", `0 0 ${containerWidth} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Use the sorted roundData as the domain for a point scale.
+  const xScale = d3.scalePoint()
+    .domain(roundData)  // Domain is the array of round objects.
+    .range([0, width])
+    .padding(0.5);
+
+  // Create the y scale based on the score values.
+  const yMin = d3.min(scores);
+  const yMax = d3.max(scores);
+  const yScale = d3.scaleLinear()
+    .domain([Math.min(0, yMin), yMax])
+    .nice()
+    .range([height, 0]);
+
+  // Create the x-axis using a custom tick format to display the date.
+  const xAxis = d3.axisBottom(xScale)
+    .tickFormat(d => d3.timeFormat("%b %d")(new Date(d.date_played)));
+  svg.append("g")
+    .attr("class", "x-axis")
+    .attr("transform", `translate(0, ${height})`)
+    .call(xAxis)
+    .selectAll("text")
+    .attr("transform", "rotate(-45)")
+    .style("text-anchor", "end");
+
+  // Create the y-axis with a custom tick formatter to add a plus sign for positive scores.
+  const yAxis = d3.axisLeft(yScale)
+    .tickFormat(d => d >= 0 ? `+${d}` : d);
+  svg.append("g")
+    .attr("class", "y-axis")
+    .call(yAxis);
+
+  // Append axis titles.
+  svg.append("text")
+    .attr("class", "x-axis-title")
+    .attr("x", width / 2)
+    .attr("y", height + margin.bottom - 5)
+    .attr("text-anchor", "middle")
+    .text("Date Played");
+
+  svg.append("text")
+    .attr("class", "y-axis-title")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", -margin.left + 15)
+    .attr("text-anchor", "middle")
+    .text("Score to Par");
+
+  // Create the line generator.
+  const line = d3.line()
+    .x((d, i) => xScale(roundData[i]))
+    .y((d, i) => yScale(scores[i]))
+    .curve(d3.curveMonotoneX);
+
+  // Append the line path.
+  svg.append("path")
+    .datum(scores)
+    .attr("fill", "none")
+    .attr("stroke", "steelblue")
+    .attr("stroke-width", 2)
+    .attr("d", line);
+
+  // Create a tooltip div.
+  const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "d3-tooltip")
+    .style("position", "absolute")
+    .style("padding", "6px")
+    .style("background", "rgba(0, 0, 0, 0.6)")
+    .style("color", "white")
+    .style("border-radius", "4px")
+    .style("pointer-events", "none")
+    .style("opacity", 0);
+
+  // Append circles at each data point with tooltip interactions.
+  svg.selectAll("circle")
+    .data(scores)
+    .enter()
+    .append("circle")
+    .attr("cx", (d, i) => xScale(roundData[i]))
+    .attr("cy", (d, i) => yScale(scores[i]))
+    .attr("r", 5)
+    .attr("fill", "white")
+    .attr("stroke", "steelblue")
+    .attr("stroke-width", 2)
+    .on("mouseover", function(event, d) {
+      const index = svg.selectAll("circle").nodes().indexOf(this);
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      const scoreDisplay = tooltips[index].score >= 0 
+                           ? `+${tooltips[index].score}` 
+                           : tooltips[index].score;
+      tooltip.html(`<strong>Course:</strong> ${tooltips[index].course}<br/>
+                    <strong>Date Played:</strong> ${tooltips[index].date}<br/>
+                    <strong>Score:</strong> ${scoreDisplay}`)
+             .style("left", (event.pageX + 10) + "px")
+             .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mousemove", function(event, d) {
+      tooltip.style("left", (event.pageX + 10) + "px")
+             .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(event, d) {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
+
+  // Append a horizontal dashed red line at y = 0.
+  svg.append("line")
+    .attr("x1", 0)
+    .attr("x2", width)
+    .attr("y1", yScale(0))
+    .attr("y2", yScale(0))
+    .attr("stroke", "red")
+    .attr("stroke-dasharray", "5,5")
+    .attr("stroke-width", 2);
 }
+
+
+
+
 
 async function updateApproachTable(params) {
   try {
