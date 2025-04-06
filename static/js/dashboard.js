@@ -34,12 +34,19 @@ const aroundGreenSGCard = document.getElementById("aroundGreenSGCard");
 const puttingSGCard = document.getElementById("puttingSGCard");
 
 // Chart.js variable for the distance histogram (strokes gained now uses D3)
-let distanceHistogram; 
+let distanceHistogram;
 
+// Event Listeners
 filterForm.addEventListener("submit", function(e) {
   e.preventDefault();
   updateDashboard();
 });
+
+document.addEventListener("DOMContentLoaded", updateDashboard);
+
+//────────────────────────────
+// Existing functions remain
+//────────────────────────────
 
 async function updateRoundPerformanceChart(params) {
   const roundRes = await fetch(`/api/rounds?${params.toString()}`);
@@ -153,21 +160,17 @@ async function updateApproachTable(params) {
   }
 }
 
-async function updateDashboard() {
-  const params = new URLSearchParams({
-    course: document.getElementById("course").value,
-    round: document.getElementById("round").value,
-    startDate: document.getElementById("startDate").value,
-    endDate: document.getElementById("endDate").value,
-  });
+//────────────────────────────
+// New Visual Functions
+//────────────────────────────
 
-  // 1) Overall Stats
+async function updateOverallStats(params) {
   const statsRes = await fetch(`/api/dashboard_stats?${params.toString()}`);
   const statsData = await statsRes.json();
-  
+
   totalRoundsCard.textContent = statsData.total_rounds;
 
-  if (statsData.total_rounds === 0){
+  if (statsData.total_rounds === 0) {
     scoringAvgCard.textContent = "--";
     scoringVsParCard.textContent = "--";
     par3Card.textContent = "--";
@@ -182,8 +185,10 @@ async function updateDashboard() {
     par4Card.textContent = statsData.par4_avg;
     par5Card.textContent = statsData.par5_avg;
   }
+  return statsData; // Return for use in other functions if needed.
+}
 
-  // 2) Overall Strokes Gained Chart (using D3.js inline)
+async function updateStrokesGainedChart(params) {
   // Remove any previous SVG in the container.
   d3.select("#sgChart").select("svg").remove();
 
@@ -205,25 +210,25 @@ async function updateDashboard() {
   // Fetch strokes gained data.
   const sgRes = await fetch(`/api/sg_by_shot_type?${params.toString()}`);
   const sgData = await sgRes.json();
-  console.log(sgData)
+  console.log(sgData);
 
   // Conditionally abbreviate the labels on small screens.
-if (window.innerWidth < 1000) {
-  sgData.labels = sgData.labels.map(label => {
-    switch(label) {
-      case "Off the Tee":
-        return "OTT";
-      case "Approach":
-        return "APP";
-      case "Around the Green":
-        return "ATG";
-      case "Putting":
-        return "PUT";
-      default:
-        return label;
-    }
-  });
-}
+  if (window.innerWidth < 1000) {
+    sgData.labels = sgData.labels.map(label => {
+      switch(label) {
+        case "Off the Tee":
+          return "OTT";
+        case "Approach":
+          return "APP";
+        case "Around the Green":
+          return "ATG";
+        case "Putting":
+          return "PUT";
+        default:
+          return label;
+      }
+    });
+  }
 
   const x = d3.scaleBand()
     .domain(sgData.labels)
@@ -238,70 +243,61 @@ if (window.innerWidth < 1000) {
     .range([height, 0]);
 
   // Draw the bars.
-// Draw the bars with custom fill and stroke.
-svg.selectAll(".bar")
-  .data(sgData.values)
-  .enter()
-  .append("rect")
-  .attr("class", "bar")
-  .attr("x", (d, i) => x(sgData.labels[i]))
-  .attr("y", d => d >= 0 ? y(d) : y(0))
-  // .on("mouseover", onMouseOver )
-  // .on("mouseout", onMouseOut )
-  .attr("width", x.bandwidth())
-  .transition()
-  .ease(d3.easeLinear)
-  .duration(1000)
-  .delay(function(d,i){ return i*50})
-  .attr("height", d => Math.abs(y(d) - y(0)))
-  .attr("fill", d => d >= 0 ? "#90ee90" : "#ffcccb")    // Light green for positive, light red for negative.
-  .attr("stroke", d => d >= 0 ? "#006400" : "#8B0000")    // Dark green for positive, dark red for negative.
-  .attr("stroke-width", 1);
+  svg.selectAll(".bar")
+    .data(sgData.values)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", (d, i) => x(sgData.labels[i]))
+    .attr("y", d => d >= 0 ? y(d) : y(0))
+    .attr("width", x.bandwidth())
+    .transition()
+    .ease(d3.easeLinear)
+    .duration(1000)
+    .delay((d, i) => i * 50)
+    .attr("height", d => Math.abs(y(d) - y(0)))
+    .attr("fill", d => d >= 0 ? "#90ee90" : "#ffcccb")
+    .attr("stroke", d => d >= 0 ? "#006400" : "#8B0000")
+    .attr("stroke-width", 1);
 
+  // Add labels to each bar.
+  svg.selectAll(".bar-label")
+    .data(sgData.values)
+    .enter()
+    .append("text")
+    .attr("class", "bar-label")
+    .attr("x", (d, i) => x(sgData.labels[i]) + x.bandwidth() / 2)
+    .attr("y", d => d >= 0 ? y(d) - 10 : y(d) + 22)
+    .attr("fill", d => d >= 0 ? "green" : "red")
+    .attr("text-anchor", "middle")
+    .text(d => d > 0 ? `+${d.toFixed(2)}` : d.toFixed(2));
 
+  // Draw a horizontal line for the x-axis.
+  svg.append("line")
+    .attr("x1", 0)
+    .attr("x2", width)
+    .attr("y1", y(0))
+    .attr("y2", y(0))
+    .attr("stroke", "black");
 
-// Add labels to each bar (rounded to 2 decimal places).
-svg.selectAll(".bar-label")
-.data(sgData.values)
-.enter()
-.append("text")
-.attr("class", "bar-label")
-.attr("x", (d, i) => x(sgData.labels[i]) + x.bandwidth() / 2)
-.attr("y", d => d >= 0 ? y(d) - 10 : y(d) + 22)
-.attr("fill", d => d >= 0 ? "green" : "red")
-.attr("text-anchor", "middle")
-.text(d => d.toFixed(2));
+  // Add labels below the x-axis.
+  svg.selectAll(".bar-labels")
+    .data(sgData.values)
+    .enter()
+    .append("text")
+    .attr("class", "bar-label")
+    .attr("x", (d, i) => x(sgData.labels[i]) + x.bandwidth() / 2)
+    .attr("y", d => d > 0 ? y(0) + 20 : y(0) - 10)
+    .attr("fill", "grey")
+    .attr("text-anchor", "middle")
+    .text((d, i) => sgData.labels[i]);
+}
 
-// Draw a horizontal black line for the x-axis.
-svg.append("line")
-.attr("x1", 0)
-.attr("x2", width)
-.attr("y1", y(0))
-.attr("y2", y(0))
-.attr("stroke", "black");
-
-// Add labels to each bar using the JSON key, positioned based on the data value.
-svg.selectAll(".bar-labels")
-  .data(sgData.values)
-  .enter()
-  .append("text")
-  .attr("class", "bar-label")
-  .attr("x", (d, i) => x(sgData.labels[i]) + x.bandwidth() / 2)
-  .attr("y", d => d > 0 ? y(0) + 20 : y(0) - 10)
-  .attr("fill", "grey")
-  .attr("text-anchor", "middle")
-  .text((d, i) => sgData.labels[i]);
-
-
-
-  // 3) Round Performance Chart
-  updateRoundPerformanceChart(params);
-
-  // 4) Tee Stats
+async function updateTeeStats(params, statsData) {
   const teeRes = await fetch(`/api/tee_stats?${params.toString()}`);
   const teeData = await teeRes.json();
 
-  if (statsData.total_rounds === 0){
+  if (statsData.total_rounds === 0) {
     teeSGCard.textContent = "--";
     teeDistanceCard.textContent = "--";
     document.getElementById("teeLieCard").textContent = "--%";
@@ -312,6 +308,7 @@ svg.selectAll(".bar-labels")
     teeDistanceCard.textContent = Math.round(teeData.avg_tee_distance) + "yds";
     document.getElementById("teeLieCard").textContent = teeData.cumulativeLiePct + "%";
   }
+
   let leftCount = 0, rightCount = 0, centerCount = 0;
   const directions = teeData.miss_directions;
   const counts = teeData.miss_counts;
@@ -341,12 +338,13 @@ svg.selectAll(".bar-labels")
     document.getElementById("rightMissSection").style.left = `${leftPct + centerPct}%`;
     document.getElementById("rightMissSection").textContent = rightCount > 0 ? `Right ${rightPct.toFixed(1)}%` : "";
   }
+}
 
-  // 5) Approach Stats (Using D3.js for the miss visualization)
+async function updateApproachStats(params, statsData) {
   const approachRes = await fetch(`/api/approach_stats?${params.toString()}`);
   const approachData = await approachRes.json();
   
-  if (statsData.total_rounds === 0){
+  if (statsData.total_rounds === 0) {
     approachSGCard.textContent = "--";
     approachGirCard.textContent = "--";
   } else {
@@ -360,9 +358,6 @@ svg.selectAll(".bar-labels")
     direction: dir,
     frequency: approachData.miss_counts[i]
   }));
-
-  const totalApproachShotsForD3 = approachData.total_approach_shots || 0;
-  const girShots = Math.round((approachData.greens_hit / 100) * totalApproachShotsForD3);
 
   d3.select("#approachMissChart").selectAll("*").remove();
 
@@ -446,14 +441,15 @@ svg.selectAll(".bar-labels")
       .style("fill", "white")
       .text(`Green: ${approachData.greens_hit.toFixed(1)}%`);
 
-  // 6) Update Approach Shots Table
+  // Update approach table.
   await updateApproachTable(params);
+}
 
-  // 7) Short Game Stats
+async function updateShortGameStats(params, statsData) {
   const sgShortRes = await fetch(`/api/short_game_stats?${params.toString()}`);
   const sgShortData = await sgShortRes.json();
   
-  if (statsData.total_rounds === 0){
+  if (statsData.total_rounds === 0) {
     upDownPercentCard.textContent = "--";
     aroundGreenSGCard.textContent = "--";
   } else {
@@ -463,12 +459,11 @@ svg.selectAll(".bar-labels")
     upDownPercentCard.textContent = sgShortData.up_down_percent + "%";
   }
 
+  // Update bunker table.
   const bunkerContainer = document.getElementById("bunkerTableBody");
   bunkerContainer.innerHTML = "";
-  const noBunkerData = !sgShortData.bunkerData || sgShortData.bunkerData.length === 0
-                      || sgShortData.bunkerData.every(row => 
-                            row.avgProximity === 0 && row.upDownPercent === 0
-                          );
+  const noBunkerData = !sgShortData.bunkerData || sgShortData.bunkerData.length === 0 ||
+                        sgShortData.bunkerData.every(row => row.avgProximity === 0 && row.upDownPercent === 0);
   if (!sgShortData.bunkerData) {
     console.warn("No bunkerData array in sgShortData");
     return; 
@@ -491,13 +486,11 @@ svg.selectAll(".bar-labels")
     bunkerContainer.appendChild(tr);
   });
 
-  // 8) Non-Bunker Shots Table
+  // Update non-bunker table.
   const nonBunkerContainer = document.getElementById("nonBunkerTableBody");
   nonBunkerContainer.innerHTML = "";
-  const noNonBunkerData = !sgShortData.nonBunkerData || sgShortData.nonBunkerData.length === 0
-                          || sgShortData.nonBunkerData.every(row => 
-                              row.avgProximity === 0 && row.upDownPercent === 0
-                            );
+  const noNonBunkerData = !sgShortData.nonBunkerData || sgShortData.nonBunkerData.length === 0 ||
+                           sgShortData.nonBunkerData.every(row => row.avgProximity === 0 && row.upDownPercent === 0);
   if (!sgShortData.nonBunkerData) {
     console.warn("No nonBunkerData array in sgShortData");
     return;
@@ -519,12 +512,13 @@ svg.selectAll(".bar-labels")
     }
     nonBunkerContainer.appendChild(tr);
   });
+}
 
-  // 9) Putting Stats
+async function updatePuttingStats(params, statsData) {
   const puttingRes = await fetch(`/api/putting_stats?${params.toString()}`);
   const puttingData = await puttingRes.json();
   
-  if (statsData.total_rounds === 0){
+  if (statsData.total_rounds === 0) {
     puttingSGCard.textContent = "--";
   } else {
     puttingSGCard.textContent = puttingData.avg_putting_sg > 0 
@@ -534,8 +528,8 @@ svg.selectAll(".bar-labels")
 
   const puttingTableBody = document.getElementById("puttingTableBody");
   puttingTableBody.innerHTML = "";
-  const noPuttingData = !puttingData.puttingData || puttingData.puttingData.length === 0
-    || puttingData.puttingData.every(row =>
+  const noPuttingData = !puttingData.puttingData || puttingData.puttingData.length === 0 ||
+    puttingData.puttingData.every(row =>
         row.makeRate === 0 && row.threePuttAvoid === 0 && row.avgNextPuttDist === 0
       );
   if (puttingData.puttingData && Array.isArray(puttingData.puttingData)) {
@@ -559,45 +553,187 @@ svg.selectAll(".bar-labels")
       puttingTableBody.appendChild(tr);
     });
   }
-
-  // 10) Distance Histogram (Overall)
-  const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
-  const histData = await histRes.json();
-  if (distanceHistogram) {
-    distanceHistogram.destroy();
-  }
-  const distCtx = distanceHistogramCanvas.getContext("2d");
-  distanceHistogram = new Chart(distCtx, {
-    type: "bar",
-    data: {
-      labels: histData.bin_labels,
-      datasets: [{
-        label: "Count of Shots",
-        data: histData.bin_counts,
-        backgroundColor: "rgba(54, 162, 235, 0.6)",
-        borderColor: "rgba(54, 162, 235, 1)",
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Distance From Hole (Yards)"
-          }
-        },
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: "Count of Shots"
-          }
-        }
-      }
-    }
-  });
 }
 
-document.addEventListener("DOMContentLoaded", updateDashboard);
+async function updateDistanceHistogram(params) {
+  const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
+  const histData = await histRes.json();
+
+  // Remove any existing SVG and tooltip.
+  d3.select("#distanceHistogram").select("svg").remove();
+  d3.selectAll(".tooltip").remove();
+
+  // Prepare data by combining bin labels, counts, and avg strokes gained.
+  const data_histogram = histData.bin_labels.map((label, i) => ({
+    label: label,
+    count: histData.bin_counts[i],
+    avg_sg: histData.bin_avg_sg[i]
+  }));
+
+  console.log(data_histogram);
+
+  const container_histogram = d3.select("#distanceHistogram");
+  const containerWidth_histogram = container_histogram.node().clientWidth || 400;
+  const margin_histogram = { top: 20, right: 20, bottom: 50, left: 50 };
+  const width_histogram = containerWidth_histogram - margin_histogram.left - margin_histogram.right;
+  const height_histogram = 300 - margin_histogram.top - margin_histogram.bottom;
+
+  // Create the SVG container.
+  const svg_histogram = container_histogram.append("svg")
+    .attr("width", containerWidth_histogram)
+    .attr("height", height_histogram + margin_histogram.top + margin_histogram.bottom)
+    .attr("viewBox", `0 0 ${containerWidth_histogram} ${height_histogram + margin_histogram.top + margin_histogram.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .append("g")
+    .attr("transform", `translate(${margin_histogram.left},${margin_histogram.top})`);
+
+  // Create x scale as a band scale for the bin labels.
+  const x_histogram = d3.scaleBand()
+    .domain(data_histogram.map(d => d.label))
+    .range([0, width_histogram])
+    .padding(0.1);
+
+  // Create y scale as a linear scale for the counts.
+  const y_histogram = d3.scaleLinear()
+    .domain([0, d3.max(data_histogram, d => d.count)])
+    .nice()
+    .range([height_histogram, 0]);
+
+  // Non-linearity exponents. Adjust these to change the gradient steepness.
+  const exponentGreen = 0.8;  // For positive avg SG values (0 to 1)
+  const exponentRed = 0.8;    // For negative avg SG values (0 to -1)
+
+  // Helper function to get the bar fill color using a non-linear transformation.
+  function getBarColor(avg_sg) {
+    if (avg_sg < 0) {
+      let t = Math.min(Math.abs(avg_sg) / 1, 1);
+      t = Math.pow(t, exponentRed);
+      return d3.interpolateReds(t);
+    } else {
+      let t = Math.min(avg_sg / 1, 1);
+      t = Math.pow(t, exponentGreen);
+      return d3.interpolateGreens(t);
+    }
+  }
+
+  // Helper function for a constant border color.
+  function getBarBorderColor(avg_sg) {
+    return avg_sg >= 0 ? d3.interpolateGreens(0.8) : d3.interpolateReds(0.8);
+  }
+
+  // Define a tooltip div that is hidden by default.
+  const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("padding", "6px")
+    .style("background", "rgba(0, 0, 0, 0.6)")
+    .style("color", "white")
+    .style("border-radius", "4px")
+    .style("pointer-events", "none")
+    .style("opacity", 0);
+
+  // Create the bars and attach event listeners.
+  const bars = svg_histogram.selectAll(".bar")
+    .data(data_histogram)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", d => x_histogram(d.label))
+    // Start bars at the bottom with zero height for transition.
+    .attr("y", y_histogram(0))
+    .attr("width", x_histogram.bandwidth())
+    .attr("height", 0)
+    .attr("fill", d => getBarColor(d.avg_sg))
+    .attr("stroke", d => getBarBorderColor(d.avg_sg))
+    .attr("stroke-width", 1)
+    .on("mouseover", function(event, d) {
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip.html(`<strong>${d.label}</strong>: ${d.count}<br/>Avg SG: ${d.avg_sg.toFixed(2)}`);
+    })
+    .on("mousemove", function(event, d) {
+      tooltip.style("left", (event.pageX + 10) + "px")
+             .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(event, d) {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
+
+  // Transition to animate bar height.
+  bars.transition()
+    .ease(d3.easeLinear)
+    .duration(1000)
+    .delay((d, i) => i * 10)
+    .attr("y", d => y_histogram(d.count))
+    .attr("height", d => height_histogram - y_histogram(d.count));
+
+  // Filter tick values to show one in every 10, excluding index 0.
+  const tickValues = x_histogram.domain().filter((d, i) => i % 10 === 0 && i !== 0);
+
+  // Add the x-axis at the bottom with custom tick formatting.
+  svg_histogram.append("g")
+    .attr("class", "x-axis")
+    .attr("transform", `translate(0, ${height_histogram})`)
+    .call(
+      d3.axisBottom(x_histogram)
+        .tickValues(tickValues)
+        .tickFormat(function(d) {
+          const i = x_histogram.domain().indexOf(d);
+          if (i === 10) return d.substring(0, 2);
+          return d.substring(0, 3);
+        })
+    );
+
+  // (Y-axis removed as per requirement)
+
+  // Add an x-axis title.
+  svg_histogram.append("text")
+    .attr("class", "x-axis-title")
+    .attr("x", width_histogram / 2)
+    .attr("y", height_histogram + margin_histogram.bottom - 10)
+    .attr("text-anchor", "middle")
+    .text("Distance From Hole (Yards)");
+}
+
+
+
+
+
+
+//────────────────────────────
+// Main Dashboard Updater
+//────────────────────────────
+
+async function updateDashboard() {
+  const params = new URLSearchParams({
+    course: document.getElementById("course").value,
+    round: document.getElementById("round").value,
+    round_type: document.getElementById("round_type").value,
+    startDate: document.getElementById("startDate").value,
+    endDate: document.getElementById("endDate").value,
+  });
+
+  // 1) Overall Stats
+  const statsData = await updateOverallStats(params);
+  
+  // 2) Strokes Gained Chart
+  await updateStrokesGainedChart(params);
+  
+  // 3) Round Performance Chart
+  await updateRoundPerformanceChart(params);
+  
+  // 4) Tee Stats
+  await updateTeeStats(params, statsData);
+  
+  // 5) Approach Stats (including D3 miss chart and table update)
+  await updateApproachStats(params, statsData);
+  
+  // 6) Short Game Stats (up/down, bunker, non-bunker)
+  await updateShortGameStats(params, statsData);
+  
+  // 7) Putting Stats
+  await updatePuttingStats(params, statsData);
+  
+  // 8) Distance Histogram
+  await updateDistanceHistogram(params);
+}

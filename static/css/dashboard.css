@@ -241,7 +241,7 @@
   .responsive-chart {
     width: 100%;
     max-width: 600px; /* Adjust as needed */
-    margin: auto;
+    margin: 1px 1px 1px 1px;
   }
 
 

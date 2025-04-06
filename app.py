@@ -1695,10 +1695,9 @@ def putting_stats():
 def distance_histogram():
     """
     Returns histogram data of distance_before (converted to yards if lie_before='Green') 
-    in 5-yard bins from 0 to 600.
+    in 5-yard bins from 0 to 600, along with the average strokes gained in each bin.
     Applies the same filters (course, round, date range) as the rest of the dashboard.
     """
-
     # 1) Parse request args (filters)
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
@@ -1707,7 +1706,7 @@ def distance_histogram():
     end_date_str = request.args.get('endDate')
 
     # 2) Query Shots joined with Round so we can filter by user & the same dashboard filters
-    shot_query = (db.session.query(Shot.distance_before, Shot.lie_before)
+    shot_query = (db.session.query(Shot.distance_before, Shot.lie_before, Shot.strokes_gained)
                   .join(Round, Shot.roundID == Round.roundID)
                   .filter(Round.userID == current_user.userID))
 
@@ -1727,30 +1726,29 @@ def distance_histogram():
 
     shots = shot_query.all()
 
-    # 3) Convert distances to yards if lie_before = 'Green', otherwise assume distance_before is already in yards
+    # 3) Process distances and strokes gained
     distances_yards = []
-    for (dist_before, lie_before) in shots:
+    strokes_gained_list = []
+    for (dist_before, lie_before, sg) in shots:
         if lie_before == "Green":
-            # dist_before is in FEET, so divide by 3 to convert to yards
+            # Convert from feet to yards
             dist_yards = dist_before / 3.0
         else:
             dist_yards = dist_before
-        # Clip at 600 if you want to ensure no out-of-bounds beyond 600 
-        # (or just trust that you won't have any >600)
+        # Clip distances to be within 0 and 600 yards.
         if dist_yards < 0:
             dist_yards = 0
         elif dist_yards > 600:
             dist_yards = 600
         distances_yards.append(dist_yards)
+        strokes_gained_list.append(sg)
 
-    # 4) Bin the distances in 5-yard increments from 0–5, 5–10, ... up to 600
-    #    We'll create a list of bin edges (0,5,10,...,600).
+    # 4) Bin the distances in 5-yard increments from 0–5, 5–10, ... up to 600.
     bin_size = 5
     max_yards = 600
-    num_bins = max_yards // bin_size  # 600//5=120
-    # We'll store counts in each bin index. 
-    bin_counts = [0] * num_bins  # 120 bins
-    # We'll also build labels like "0-5", "5-10", ...
+    num_bins = max_yards // bin_size  # e.g. 600//5 = 120
+    bin_counts = [0] * num_bins
+    bin_total_sg = [0.0] * num_bins  # Accumulate strokes gained for each bin.
     bin_labels = []
     for i in range(num_bins):
         left_edge = i * bin_size
@@ -1758,19 +1756,28 @@ def distance_histogram():
         label = f"{left_edge}-{right_edge}"
         bin_labels.append(label)
 
-    # 5) Increment counts for each shot
-    for dist_y in distances_yards:
-        # Which bin does this distance fall into?
-        bin_index = int(dist_y // bin_size)  # e.g. dist_y=12 => bin_index=2 (for 10–15)
-        # Edge case: dist_y=600 => bin_index=120; but our bins go up to index=119
-        if bin_index == num_bins: 
-            bin_index = num_bins - 1  # Put it into the last bin
+    # 5) Increment counts and accumulate strokes gained for each shot.
+    for dist_y, sg in zip(distances_yards, strokes_gained_list):
+        bin_index = int(dist_y // bin_size)
+        if bin_index == num_bins:
+            bin_index = num_bins - 1  # Edge case for distance exactly equal to 600.
         bin_counts[bin_index] += 1
+        bin_total_sg[bin_index] += sg
 
-    # 6) Return JSON
+    # 6) Compute average strokes gained per bin.
+    bin_avg_sg = []
+    for i in range(num_bins):
+        if bin_counts[i] > 0:
+            avg_sg = bin_total_sg[i] / bin_counts[i]
+        else:
+            avg_sg = 0.0
+        bin_avg_sg.append(avg_sg)
+
+    # 7) Return JSON with bin labels, counts, and average strokes gained.
     data = {
-        "bin_labels": bin_labels,  # e.g. ["0-5", "5-10", ..., "595-600"]
-        "bin_counts": bin_counts   # e.g. [12, 42, 18, ...]
+        "bin_labels": bin_labels,      # e.g. ["0-5", "5-10", ..., "595-600"]
+        "bin_counts": bin_counts,      # e.g. [12, 42, 18, ...]
+        "bin_avg_sg": bin_avg_sg       # e.g. [0.5, -0.2, 0.1, ...]
     }
     return jsonify(data)
 
