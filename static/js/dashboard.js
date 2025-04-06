@@ -555,6 +555,10 @@ async function updatePuttingStats(params, statsData) {
   }
 }
 
+//────────────────────────────
+// Distance Histogram Functions
+//────────────────────────────
+
 async function updateDistanceHistogram(params) {
   const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
   const histData = await histRes.json();
@@ -695,10 +699,153 @@ async function updateDistanceHistogram(params) {
     .text("Distance From Hole (Yards)");
 }
 
+// Displays the histogram in a vertical manner for mobile screen width
+async function updateDistanceHistogramVertical(params) {
+  const histRes = await fetch(`/api/distance_histogram?${params.toString()}`);
+  const histData = await histRes.json();
 
+  // Remove any existing SVG and tooltip.
+  d3.select("#distanceHistogram").select("svg").remove();
+  d3.selectAll(".tooltip").remove();
 
+  // Prepare data: each bin has a label, count, and average strokes gained.
+  const data_histogram = histData.bin_labels.map((label, i) => ({
+    label: label,
+    count: histData.bin_counts[i],
+    avg_sg: histData.bin_avg_sg[i]
+  }));
 
+  console.log(data_histogram);
 
+  const container = d3.select("#distanceHistogram");
+  const containerWidth = container.node().clientWidth || 400;
+  // Set a fixed height for the chart; adjust as needed.
+  const margin = { top: 20, right: 20, bottom: 50, left: 30 };
+  const width = containerWidth - margin.left - margin.right;
+  const height = 600 - margin.top - margin.bottom;
+
+  // Create the SVG container.
+  const svg = container.append("svg")
+    .attr("width", containerWidth)
+    .attr("height", height + margin.top + margin.bottom)
+    .attr("viewBox", `0 0 ${containerWidth} ${height + margin.top + margin.bottom}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // For horizontal bars:
+  // x scale: linear scale for count values.
+  const x = d3.scaleLinear()
+    .domain([0, d3.max(data_histogram, d => d.count)])
+    .nice()
+    .range([0, width]);
+
+  // y scale: band scale for bin labels.
+  const y = d3.scaleBand()
+    .domain(data_histogram.map(d => d.label))
+    .range([0, height])
+    .padding(0.1);
+
+  // Non-linearity exponents (adjust these to change gradient steepness).
+  const exponentGreen = 0.8;  // For avg SG values between 0 and 1.
+  const exponentRed = 0.8;    // For avg SG values between 0 and -1.
+
+  // Helper function to get the fill color using a non-linear transformation.
+  function getBarColor(avg_sg) {
+    if (avg_sg < 0) {
+      let t = Math.min(Math.abs(avg_sg) / 1, 1);
+      t = Math.pow(t, exponentRed);
+      return d3.interpolateReds(t);
+    } else {
+      let t = Math.min(avg_sg / 1, 1);
+      t = Math.pow(t, exponentGreen);
+      return d3.interpolateGreens(t);
+    }
+  }
+
+  // Helper function for a constant border color.
+  function getBarBorderColor(avg_sg) {
+    return avg_sg >= 0 ? d3.interpolateGreens(0.8) : d3.interpolateReds(0.8);
+  }
+
+  // Define tooltip.
+  const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("padding", "6px")
+    .style("background", "rgba(0, 0, 0, 0.6)")
+    .style("color", "white")
+    .style("border-radius", "4px")
+    .style("pointer-events", "none")
+    .style("opacity", 0);
+
+  // Create horizontal bars.
+  const bars = svg.selectAll(".bar")
+    .data(data_histogram)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    // y position is based on the bin label.
+    .attr("y", d => y(d.label))
+    .attr("x", 0)
+    .attr("height", y.bandwidth())
+    // Start with zero width for transition.
+    .attr("width", 0)
+    .attr("fill", d => getBarColor(d.avg_sg))
+    .attr("stroke", d => getBarBorderColor(d.avg_sg))
+    .attr("stroke-width", 1)
+    .on("mouseover", function(event, d) {
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip.html(`<strong>${d.label}</strong>: ${d.count}<br/>Avg SG: ${d.avg_sg.toFixed(2)}`);
+    })
+    .on("mousemove", function(event, d) {
+      tooltip.style("left", (event.pageX + 10) + "px")
+             .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(event, d) {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
+
+  // Animate bar widths.
+  bars.transition()
+    .ease(d3.easeLinear)
+    .duration(1000)
+    .delay((d, i) => i * 10)
+    .attr("width", d => x(d.count));
+
+  // Add y-axis (bin labels) on the left.
+  svg.append("g")
+    .attr("class", "y-axis")
+    .call(d3.axisLeft(y)
+      // Customize tick formatting if needed.
+      .tickValues(y.domain().filter((d, i) => i % 10 === 0 && i !== 0))
+      .tickFormat(function(d) { 
+        const i = y.domain().indexOf(d);
+        if (i === 10) return d.substring(0,2);
+        return d.substring(0, 3); })
+    );
+
+  // Add an x-axis title.
+  svg.append("text")
+    .attr("class", "x-axis-title")
+    .attr("x", width / 2)
+    .attr("y", height + margin.bottom - 10)
+    .attr("text-anchor", "middle")
+    .text("Count of Shots");
+}
+
+//────────────────────────────
+// Responsive Histogram Selector
+//────────────────────────────
+
+async function updateDistanceHistogramResponsive(params) {
+  if (window.innerWidth < 1000) {
+    await updateDistanceHistogramVertical(params);
+  } else {
+    await updateDistanceHistogram(params);
+  }
+}
 
 //────────────────────────────
 // Main Dashboard Updater
@@ -734,6 +881,6 @@ async function updateDashboard() {
   // 7) Putting Stats
   await updatePuttingStats(params, statsData);
   
-  // 8) Distance Histogram
-  await updateDistanceHistogram(params);
+  // 8) Distance Histogram (Responsive: vertical for small screens, horizontal for larger)
+  await updateDistanceHistogramResponsive(params);
 }
