@@ -240,7 +240,7 @@
   
   .responsive-chart {
     width: 100%;
-    max-width: 600px; /* Adjust as needed */
+    max-width: 300px; /* Adjust as needed */
     margin: 1px 1px 1px 1px;
   }
 
@@ -250,3 +250,9 @@
     font-weight: bold;
     font-size: 20px;
   }
+
+
+
+
+
+

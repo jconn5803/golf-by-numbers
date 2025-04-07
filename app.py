@@ -700,6 +700,83 @@ def sg_by_shot_type():
     }
     return jsonify(data)
 
+@app.route('/api/last50_approach', methods=['GET'])
+@login_required
+def last50_approach():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_approach": float(r.sg_approach or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+@app.route('/api/last50_offtee', methods=['GET'])
+@login_required
+def last50_offtee():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_off_tee": float(r.sg_off_tee or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+@app.route('/api/last50_around_green', methods=['GET'])
+@login_required
+def last50_around_green():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_around_green": float(r.sg_around_green or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+@app.route('/api/last50_putting', methods=['GET'])
+@login_required
+def last50_putting():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_putting": float(r.sg_putting or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+
 
 @app.route('/api/dashboard_stats', methods=['GET'])
 @login_required
@@ -1695,7 +1772,12 @@ def putting_stats():
 def distance_histogram():
     """
     Returns histogram data of distance_before (converted to yards if lie_before='Green') 
-    in 5-yard bins from 0 to 600, along with the average strokes gained in each bin.
+    using custom bins:
+      - First bin: 1–3 yards,
+      - Second bin: 3–5 yards,
+      - Then 5-yard bins from 5 up to 600 yards.
+    Each bin includes the average strokes gained (sg) for shots in that range.
+    Only shots > 1 yard are considered.
     Applies the same filters (course, round, date range) as the rest of the dashboard.
     """
     # 1) Parse request args (filters)
@@ -1710,7 +1792,6 @@ def distance_histogram():
                   .join(Round, Shot.roundID == Round.roundID)
                   .filter(Round.userID == current_user.userID))
 
-    # Apply filters
     if course_id:
         shot_query = shot_query.filter(Round.course_id == course_id)
     if round_id:
@@ -1726,12 +1807,12 @@ def distance_histogram():
 
     shots = shot_query.all()
 
-    # 3) Process distances and strokes gained
+    # 3) Process distances and strokes gained.
     distances_yards = []
     strokes_gained_list = []
     for (dist_before, lie_before, sg) in shots:
         if lie_before == "Green":
-            # Convert from feet to yards
+            # Convert from feet to yards.
             dist_yards = dist_before / 3.0
         else:
             dist_yards = dist_before
@@ -1743,26 +1824,41 @@ def distance_histogram():
         distances_yards.append(dist_yards)
         strokes_gained_list.append(sg)
 
-    # 4) Bin the distances in 5-yard increments from 0–5, 5–10, ... up to 600.
-    bin_size = 5
-    max_yards = 600
-    num_bins = max_yards // bin_size  # e.g. 600//5 = 120
+    # 4) Define custom bins.
+    # First bin: 1 to 3 yards, second bin: 3 to 5 yards.
+    custom_bins = [(1, 3), (3, 5)]
+    # Then, add 5-yard bins from 5 up to 600.
+    for lower in range(5, 600, 5):
+        custom_bins.append((lower, lower + 5))
+    num_bins = len(custom_bins)
+    bin_labels = [f"{lb}-{ub}" for (lb, ub) in custom_bins]
     bin_counts = [0] * num_bins
-    bin_total_sg = [0.0] * num_bins  # Accumulate strokes gained for each bin.
-    bin_labels = []
-    for i in range(num_bins):
-        left_edge = i * bin_size
-        right_edge = left_edge + bin_size
-        label = f"{left_edge}-{right_edge}"
-        bin_labels.append(label)
+    bin_total_sg = [0.0] * num_bins
 
     # 5) Increment counts and accumulate strokes gained for each shot.
     for dist_y, sg in zip(distances_yards, strokes_gained_list):
-        bin_index = int(dist_y // bin_size)
-        if bin_index == num_bins:
-            bin_index = num_bins - 1  # Edge case for distance exactly equal to 600.
-        bin_counts[bin_index] += 1
-        bin_total_sg[bin_index] += sg
+        # Only consider shots > 1 yard.
+        if dist_y <= 1:
+            continue
+        assigned = False
+        for i, (lb, ub) in enumerate(custom_bins):
+            # For all bins except the last, include shot if lb <= dist < ub.
+            # For the last bin, include shot if lb <= dist <= ub.
+            if i == num_bins - 1:
+                if lb <= dist_y <= ub:
+                    bin_counts[i] += 1
+                    bin_total_sg[i] += sg
+                    assigned = True
+                    break
+            else:
+                if lb <= dist_y < ub:
+                    bin_counts[i] += 1
+                    bin_total_sg[i] += sg
+                    assigned = True
+                    break
+        # (If not assigned, the shot is skipped.)
+        if not assigned:
+            continue
 
     # 6) Compute average strokes gained per bin.
     bin_avg_sg = []
@@ -1775,11 +1871,13 @@ def distance_histogram():
 
     # 7) Return JSON with bin labels, counts, and average strokes gained.
     data = {
-        "bin_labels": bin_labels,      # e.g. ["0-5", "5-10", ..., "595-600"]
-        "bin_counts": bin_counts,      # e.g. [12, 42, 18, ...]
-        "bin_avg_sg": bin_avg_sg       # e.g. [0.5, -0.2, 0.1, ...]
+        "bin_labels": bin_labels,
+        "bin_counts": bin_counts,
+        "bin_avg_sg": bin_avg_sg
     }
     return jsonify(data)
+
+
 
 
 @app.route('/get_tees/<int:course_id>')

@@ -2,6 +2,7 @@
 const filterForm = document.getElementById("filterForm");
 // For the strokes gained chart, we now expect a div container (not a canvas)
 const sgChartContainer = document.getElementById("sgChart");
+console.log(sgChartContainer)
 const distanceHistogramCanvas = document.getElementById("distanceHistogram");
 
 // Overall tab card elements
@@ -19,19 +20,22 @@ let roundPerformanceChart;
 // Tee tab elements
 const teeSGCard = document.getElementById("teeSGCard");
 const teeDistanceCard = document.getElementById("teeDistanceCard");
-let teeMissChart;
+
 
 // Approach tab elements
 const approachSGCard = document.getElementById("approachSGCard");
 const approachGirCard = document.getElementById("approachGirCard");
-// (We use D3 for the miss directions)
+
 
 // Short Game tab elements
 const upDownPercentCard = document.getElementById("upDownPercentCard");
 const aroundGreenSGCard = document.getElementById("aroundGreenSGCard");
 
+
 // Putting tab elements
 const puttingSGCard = document.getElementById("puttingSGCard");
+
+
 
 // Chart.js variable for the distance histogram (strokes gained now uses D3)
 let distanceHistogram;
@@ -431,25 +435,178 @@ async function updateApproachStats(params, statsData) {
     approachGirCard.textContent = approachData.gir_percent + "%";
   }
 
-  const missData = approachData.miss_directions.map((dir, i) => ({
-    direction: dir,
-    frequency: approachData.miss_counts[i]
-  }));
+  // Use total approach shots from the JSON to calculate percentages
+  const totalApproachShots = approachData.total_approach_shots;
 
+  // Map miss directions to include frequency and percentage relative to total approach shots
+  const missData = approachData.miss_directions.map((dir, i) => {
+    const count = approachData.miss_counts[i];
+    const percentage = totalApproachShots > 0 ? ((count / totalApproachShots) * 100).toFixed(1) : 0;
+    return { direction: dir, frequency: count, percentage: percentage };
+  });
+
+  // Clear the previous chart content
   d3.select("#approachMissChart").selectAll("*").remove();
 
-  const widthD3 = 400,
-        heightD3 = 400,
-        marginD3 = 20,
-        radius = Math.min(widthD3, heightD3) / 2 - marginD3;
+  // Call the function to create the D3 chart
+  createApproachMissChart(missData, approachData);
 
-  const svgApproach = d3.select("#approachMissChart")
-                .append("svg")
-                .attr("width", widthD3)
-                .attr("height", heightD3)
-                .append("g")
-                .attr("transform", `translate(${widthD3/2},${heightD3/2})`);
+  // Update approach table
+  await updateApproachTable(params);
+}
 
+
+
+// New function to update a SG chart with a 10-round rolling average.
+// New responsive updateSgChart function
+async function updateSgChart(containerId, endpointUrl, sgField) {
+  try {
+    // Fetch data from the endpoint.
+    const res = await fetch(endpointUrl);
+    let data = await res.json();
+
+    // Sort data chronologically based on date_played.
+    data.sort((a, b) => new Date(a.date_played) - new Date(b.date_played));
+
+    // Compute a 10-round rolling average for the provided sgField.
+    data.forEach((d, i) => {
+      const start = Math.max(0, i - 9);
+      const windowData = data.slice(start, i + 1);
+      const sum = windowData.reduce((acc, cur) => acc + cur[sgField], 0);
+      d.rollingAvg = sum / windowData.length;
+    });
+
+    // Select the container and remove any existing SVG.
+    const container = d3.select(`#${containerId}`);
+    container.select("svg").remove();
+
+    // Define margins and dimensions based on the container's current width.
+    const margin = { top: 20, right: 30, bottom: 50, left: 50 };
+    const containerWidth = container.node().clientWidth || 400;
+    const width = containerWidth - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    // Create the SVG container with a viewBox for responsiveness.
+    const svg = container.append("svg")
+      .attr("width", containerWidth)
+      .attr("height", height + margin.top + margin.bottom)
+      .attr("viewBox", `0 0 ${containerWidth} ${height + margin.top + margin.bottom}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Create an x-scale using the roundID values.
+    const xScale = d3.scalePoint()
+      .domain(data.map(d => d.roundID))
+      .range([0, width])
+      .padding(0.5);
+
+    // Create a y-scale based on the raw SG and rolling average values.
+    const yMin = d3.min(data, d => Math.min(d[sgField], d.rollingAvg));
+    const yMax = d3.max(data, d => Math.max(d[sgField], d.rollingAvg));
+    const yScale = d3.scaleLinear()
+      .domain([Math.min(0, yMin), yMax])
+      .nice()
+      .range([height, 0]);
+
+    // Append the x-axis.
+    const xAxis = d3.axisBottom(xScale);
+    svg.append("g")
+      .attr("class", "x-axis")
+      .attr("transform", `translate(0, ${height})`)
+      .call(xAxis)
+      .selectAll("text")
+      .attr("transform", "rotate(-45)")
+      .style("text-anchor", "end");
+
+    // Append the y-axis.
+    const yAxis = d3.axisLeft(yScale);
+    svg.append("g")
+      .attr("class", "y-axis")
+      .call(yAxis);
+
+    // Add axis titles.
+    svg.append("text")
+      .attr("class", "x-axis-title")
+      .attr("x", width / 2)
+      .attr("y", height + margin.bottom - 5)
+      .attr("text-anchor", "middle")
+      .text("Round ID");
+
+    svg.append("text")
+      .attr("class", "y-axis-title")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", -margin.left + 15)
+      .attr("text-anchor", "middle")
+      .text("Strokes Gained");
+
+    // Generate the line for raw SG values.
+    const lineRaw = d3.line()
+      .x(d => xScale(d.roundID))
+      .y(d => yScale(d[sgField]))
+      .curve(d3.curveMonotoneX);
+
+    svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2)
+      .attr("d", lineRaw);
+
+    // Generate the line for the 10-round rolling average.
+    const lineRolling = d3.line()
+      .x(d => xScale(d.roundID))
+      .y(d => yScale(d.rollingAvg))
+      .curve(d3.curveMonotoneX);
+
+    svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "orange")
+      .attr("stroke-dasharray", "5,5")
+      .attr("stroke-width", 2)
+      .attr("d", lineRolling);
+
+    // Append circles for each raw SG data point.
+    svg.selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("cx", d => xScale(d.roundID))
+      .attr("cy", d => yScale(d[sgField]))
+      .attr("r", 4)
+      .attr("fill", "white")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2);
+
+  } catch (error) {
+    console.error(`Error updating chart for ${containerId}:`, error);
+  }
+}
+
+
+
+
+function createApproachMissChart(missData, approachData) {
+  // Get container width (default to 400 if not available)
+  const container = d3.select("#approachMissChart");
+  const containerWidth = container.node().clientWidth || 400;
+  const widthD3 = containerWidth;
+  const heightD3 = containerWidth; // Use a square chart; adjust as needed.
+  const marginD3 = 20;
+  const radius = Math.min(widthD3, heightD3) / 2 - marginD3;
+
+  // Create an SVG that scales responsively.
+  const svgApproach = container.append("svg")
+    .attr("width", "100%")
+    .attr("height", heightD3)
+    .attr("viewBox", `0 0 ${widthD3} ${heightD3}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .append("g")
+    .attr("transform", `translate(${widthD3 / 2}, ${heightD3 / 2})`);
+
+  // Create tooltip
   const tooltip = d3.select("body")
     .append("div")
     .attr("class", "d3-tooltip")
@@ -463,64 +620,90 @@ async function updateApproachStats(params, statsData) {
 
   const numSlices = missData.length;
   const angleDelta = 2 * Math.PI / numSlices;
-  const maxFreq = d3.max(missData, d => d.frequency);
-  const rScale = d3.scaleLinear()
-                   .domain([0, maxFreq])
-                   .range([radius * 0.3, radius]);
 
+  // Prepare the data with fixed angular slices.
   const dataWithAngles = missData.map((d, i) => ({
     direction: d.direction,
     frequency: d.frequency,
+    percentage: d.percentage,
     startAngle: i * angleDelta + (22.5 * Math.PI / 180),
     endAngle: (i + 1) * angleDelta + (22.5 * Math.PI / 180)
   }));
 
+  // Define the arc with a fixed inner and outer radius.
   const arc = d3.arc()
-                .innerRadius(radius * 0.3)
-                .outerRadius(d => rScale(d.frequency))
-                .startAngle(d => d.startAngle)
-                .endAngle(d => d.endAngle);
+    .innerRadius(radius * 0.5)
+    .outerRadius(radius)
+    .startAngle(d => d.startAngle)
+    .endAngle(d => d.endAngle);
 
+  // Append the arcs for each miss direction with a color gradient.
   svgApproach.selectAll("path")
-      .data(dataWithAngles)
-      .enter()
-      .append("path")
-      .attr("d", arc)
-      .attr("fill", 'red')
-      .attr("stroke", "white")
-      .style("stroke-width", "2px")
-      .on("mouseover", function(event, d) {
-         tooltip.transition().duration(200).style("opacity", 0.9);
-         tooltip.html(`<strong>${d.direction}</strong>: ${d.frequency}`)
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 28) + "px");
-      })
-      .on("mousemove", function(event, d) {
-         tooltip.style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 28) + "px");
-      })
-      .on("mouseout", function(event, d) {
-         tooltip.transition().duration(500).style("opacity", 0);
-      });
+    .data(dataWithAngles)
+    .enter()
+    .append("path")
+    .attr("d", arc)
+    .attr("fill", d => {
+      // Convert the percentage (0-100) to a number.
+      const perc = +d.percentage;
+      // Compute a logarithmic factor between 0 and 1.
+      const factor = Math.log(perc + 1) / Math.log(101);
+      // Interpolate from white (0% miss) to red (100% miss).
+      return d3.interpolateRgb("white", "red")(factor);
+    })
+    .attr("stroke", "#8B0000") // darker red border for the slices.
+    .style("stroke-width", "2px")
+    .on("mouseover", function(event, d) {
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip.html(`<strong>${d.direction}</strong>: ${d.frequency} (${d.percentage}%)`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mousemove", function(event, d) {
+      tooltip.style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(event, d) {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
 
-  const centerRadius = radius * 0.3;
+  // Append percentage labels at the centroid of each arc.
+  svgApproach.selectAll("text.label")
+    .data(dataWithAngles)
+    .enter()
+    .append("text")
+    .attr("class", "label")
+    .attr("transform", d => {
+      const c = arc.centroid(d);
+      return `translate(${c[0]}, ${c[1]})`;
+    })
+    .attr("text-anchor", "middle")
+    .attr("dy", ".35em")
+    .text(d => d.percentage + "%")
+    .style("font-size", "16px")
+    .style("fill", "black");
+
+  // Draw the inner circle to represent the green hit rate.
+  const centerRadius = radius * 0.5;
   svgApproach.append("circle")
-      .attr("cx", 0)
-      .attr("cy", 0)
-      .attr("r", centerRadius)
-      .attr("fill", "green")
-      .attr("opacity", 0.8);
+    .attr("cx", 0)
+    .attr("cy", 0)
+    .attr("r", centerRadius)
+    .attr("fill", "#90EE90")   // light green fill.
+    .attr("stroke", "#006400") // dark green border.
+    .style("stroke-width", "2px")
+    .attr("opacity", 0.8);
 
   svgApproach.append("text")
-      .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
-      .style("font-size", "14px")
-      .style("fill", "white")
-      .text(`Green: ${approachData.greens_hit.toFixed(1)}%`);
-
-  // Update approach table.
-  await updateApproachTable(params);
+    .attr("text-anchor", "middle")
+    .attr("dy", "0.35em")
+    .style("font-size", "16px")
+    .style("fill", "black")
+    .text(`Green: ${approachData.greens_hit.toFixed(1)}%`);
 }
+
+
+
 
 async function updateShortGameStats(params, statsData) {
   const sgShortRes = await fetch(`/api/short_game_stats?${params.toString()}`);
@@ -960,4 +1143,12 @@ async function updateDashboard() {
   
   // 8) Distance Histogram (Responsive: vertical for small screens, horizontal for larger)
   await updateDistanceHistogramResponsive(params);
+
+
+
+  // New SG charts for each shot type:
+  await updateSgChart("offTeeSgBarChart", "/api/last50_offtee", "sg_off_tee");
+  await updateSgChart("approachSgBarChart", "/api/last50_approach", "sg_approach");
+  await updateSgChart("aroundGreenSgBarChart", "/api/last50_around_green", "sg_around_green");
+  await updateSgChart("puttingSgBarChart", "/api/last50_putting", "sg_putting");
 }
