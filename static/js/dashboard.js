@@ -457,15 +457,14 @@ async function updateApproachStats(params, statsData) {
 
 
 
-// New function to update a SG chart with a 10-round rolling average.
-// New responsive updateSgChart function
+// New function to update a SG chart with a 10-round rolling average using a bar chart.
 async function updateSgChart(containerId, endpointUrl, sgField) {
   try {
     // Fetch data from the endpoint.
     const res = await fetch(endpointUrl);
     let data = await res.json();
 
-    // Sort data chronologically based on date_played.
+    // Sort data chronologically by date_played.
     data.sort((a, b) => new Date(a.date_played) - new Date(b.date_played));
 
     // Compute a 10-round rolling average for the provided sgField.
@@ -480,28 +479,53 @@ async function updateSgChart(containerId, endpointUrl, sgField) {
     const container = d3.select(`#${containerId}`);
     container.select("svg").remove();
 
-    // Define margins and dimensions based on the container's current width.
-    const margin = { top: 20, right: 30, bottom: 50, left: 50 };
-    const containerWidth = container.node().clientWidth || 400;
-    const width = containerWidth - margin.left - margin.right;
-    const height = 300 - margin.top - margin.bottom;
+    // Define margins and base dimensions.
+    const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+    const width = 600 - margin.left - margin.right;  // Base width
+    const height = 300 - margin.top - margin.bottom; // Base height
 
-    // Create the SVG container with a viewBox for responsiveness.
+    // Calculate total SVG size (includes margins).
+    const svgWidth = width + margin.left + margin.right;
+    const svgHeight = height + margin.top + margin.bottom;
+
+    // Create the SVG container with a responsive viewBox.
+    // We do NOT set height to "auto" as that is invalid for SVG.
+    // Instead, rely on the viewBox and CSS width:100%.
     const svg = container.append("svg")
-      .attr("width", containerWidth)
-      .attr("height", height + margin.top + margin.bottom)
-      .attr("viewBox", `0 0 ${containerWidth} ${height + margin.top + margin.bottom}`)
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
       .attr("preserveAspectRatio", "xMidYMid meet")
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Create an x-scale using the roundID values.
-    const xScale = d3.scalePoint()
+    // Create a legend group near the top of the chart.
+    const legendG = svg.append("g")
+      .attr("class", "legend")
+      .attr("transform", "translate(0, -15)");
+
+    legendG.append("line")
+      .attr("x1", 0)
+      .attr("y1", 0)
+      .attr("x2", 40)
+      .attr("y2", 0)
+      .attr("stroke", "steelblue")
+      .attr("stroke-dasharray", "5,5")
+      .attr("stroke-width", 2);
+
+    legendG.append("text")
+      .attr("x", 45)
+      .attr("y", 4)
+      .attr("fill", "black")
+      .attr("font-size", "12px")
+      .text("10 Round Rolling Average");
+
+    // Create a band scale for the x-axis using the roundID values.
+    const xScale = d3.scaleBand()
       .domain(data.map(d => d.roundID))
       .range([0, width])
-      .padding(0.5);
+      .padding(0.2);
 
-    // Create a y-scale based on the raw SG and rolling average values.
+    // Create a y-scale based on both the raw SG values and the rolling average.
     const yMin = d3.min(data, d => Math.min(d[sgField], d.rollingAvg));
     const yMax = d3.max(data, d => Math.max(d[sgField], d.rollingAvg));
     const yScale = d3.scaleLinear()
@@ -509,81 +533,94 @@ async function updateSgChart(containerId, endpointUrl, sgField) {
       .nice()
       .range([height, 0]);
 
-    // Append the x-axis.
-    const xAxis = d3.axisBottom(xScale);
-    svg.append("g")
-      .attr("class", "x-axis")
-      .attr("transform", `translate(0, ${height})`)
-      .call(xAxis)
-      .selectAll("text")
-      .attr("transform", "rotate(-45)")
-      .style("text-anchor", "end");
+    // Add the y-axis with a custom tick format
+    // so that positive numbers have a "+" prefix.
+    const yAxis = d3.axisLeft(yScale)
+      .tickFormat(d => d >= 0 ? `+${d}` : `${d}`);
 
-    // Append the y-axis.
-    const yAxis = d3.axisLeft(yScale);
     svg.append("g")
       .attr("class", "y-axis")
       .call(yAxis);
 
-    // Add axis titles.
-    svg.append("text")
-      .attr("class", "x-axis-title")
-      .attr("x", width / 2)
-      .attr("y", height + margin.bottom - 5)
-      .attr("text-anchor", "middle")
-      .text("Round ID");
+    // Draw a horizontal reference line at y = 0.
+    svg.append("line")
+      .attr("x1", 0)
+      .attr("x2", width)
+      .attr("y1", yScale(0))
+      .attr("y2", yScale(0))
+      .attr("stroke", "black");
 
-    svg.append("text")
-      .attr("class", "y-axis-title")
-      .attr("transform", "rotate(-90)")
-      .attr("x", -height / 2)
-      .attr("y", -margin.left + 15)
-      .attr("text-anchor", "middle")
-      .text("Strokes Gained");
+    // Append bars for each raw SG value.
+    const bars = svg.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => xScale(d.roundID))
+      .attr("y", d => (d[sgField] >= 0) ? yScale(d[sgField]) : yScale(0))
+      .attr("width", xScale.bandwidth())
+      .attr("height", d =>
+        d[sgField] >= 0
+          ? (yScale(0) - yScale(d[sgField]))
+          : (yScale(d[sgField]) - yScale(0))
+      )
+      .attr("fill", d => (d[sgField] >= 0) ? "#90ee90" : "#ffcccb")
+      .attr("stroke", d => (d[sgField] >= 0) ? "#006400" : "#8B0000")
+      .attr("stroke-width", 1);
 
-    // Generate the line for raw SG values.
-    const lineRaw = d3.line()
-      .x(d => xScale(d.roundID))
-      .y(d => yScale(d[sgField]))
-      .curve(d3.curveMonotoneX);
-
-    svg.append("path")
-      .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 2)
-      .attr("d", lineRaw);
-
-    // Generate the line for the 10-round rolling average.
+    // Generate the 10-round rolling average line (with dashed steelblue stroke).
     const lineRolling = d3.line()
-      .x(d => xScale(d.roundID))
+      .x(d => xScale(d.roundID) + xScale.bandwidth() / 2)
       .y(d => yScale(d.rollingAvg))
       .curve(d3.curveMonotoneX);
 
     svg.append("path")
       .datum(data)
       .attr("fill", "none")
-      .attr("stroke", "orange")
+      .attr("stroke", "steelblue")
       .attr("stroke-dasharray", "5,5")
       .attr("stroke-width", 2)
       .attr("d", lineRolling);
 
-    // Append circles for each raw SG data point.
-    svg.selectAll("circle")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("cx", d => xScale(d.roundID))
-      .attr("cy", d => yScale(d[sgField]))
-      .attr("r", 4)
-      .attr("fill", "white")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 2);
+    // Create a tooltip div.
+    const tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "d3-tooltip")
+      .style("position", "absolute")
+      .style("padding", "6px")
+      .style("background", "rgba(0, 0, 0, 0.6)")
+      .style("color", "white")
+      .style("border-radius", "4px")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
+
+    // Attach tooltip interactions to each bar.
+    bars.on("mouseover", function(event, d) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        // Use a conditional to prefix "+" for positive values in the tooltip
+        const signedValue = (d[sgField] >= 0 ? "+" : "") + d[sgField].toFixed(2);
+        tooltip.html(
+          `<strong>Course:</strong> ${d.course_name}<br/>
+           <strong>Date Played:</strong> ${d.date_played}<br/>
+           <strong>SG:</strong> ${signedValue}`
+        )
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mousemove", function(event) {
+        tooltip
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.transition().duration(500).style("opacity", 0);
+      });
 
   } catch (error) {
     console.error(`Error updating chart for ${containerId}:`, error);
   }
 }
+
 
 
 

@@ -12,22 +12,23 @@
 {% block content %}
 <div class="dashboard-wrapper">
   
-  <h1 class="mb-4">{{ current_user.first_name }}'s Dashboard</h1>
+  <nav class="navbar custom-navbar mb-4">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+      <!-- User name / Dashboard text on the left -->
+      <h1 class="mb-0">{{ current_user.first_name }}'s Dashboard</h1>
   
-  <!-- Secondary navbar -->
-  <nav class="navbar custom-navbar">
-    <div class="container-fluid">
-      <ul class="nav">
-        <li class="nav-item">
+      <!-- Allow wrapping + add spacing on the right side -->
+      <ul class="nav ms-auto d-flex flex-wrap">
+        <li class="nav-item me-2 mb-2">
           <a class="nav-link custom-nav-link custom-nav-primary" href="{{ url_for('add_round') }}">Add Round</a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item me-2 mb-2">
           <a class="nav-link custom-nav-link" href="{{ url_for('add_course') }}">Add Course</a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item me-2 mb-2">
           <a class="nav-link custom-nav-link" href="{{ url_for('my_rounds') }}">My Rounds</a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item me-2 mb-2">
           <a class="nav-link custom-nav-link" href="{{ url_for('courses') }}">All Courses</a>
         </li>
       </ul>
