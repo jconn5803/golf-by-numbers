@@ -34,7 +34,7 @@
 
     // Build the HTML string for the new shot
     const newShotHTML = `
-  <div class="shot-card mb-3" id="hole_${holeNumber}_shot_${newShotNum}">
+  <div class="shot-card mb-3" id="hole_${holeNumber}_shot_${newShotNum}" data-par="{{ hole.par }}">
     <h5 class="shot-title">Shot #${newShotNumber}</h5>
 
     <div class="mb-3">
@@ -66,7 +66,7 @@
         id="hole_${holeNumber}_shot_${newShotNum}_lie" 
         required 
         onchange="updateDistanceLabel(${holeNumber}, ${newShotNum}); 
-                  updateMissDirection(${holeNumber}, ${newShotNum}, ${par});"
+                  updateMissDirection(${holeNumber}, ${newShotNum}, ${par}); updateClubSelect(${holeNumber}, ${newShotNum}, ${par});"
       >
         <option value="Tee" ${preselectedLie === 'Tee' ? 'selected' : ''}>Tee</option>
         <option value="Fairway" ${preselectedLie === 'Fairway' ? 'selected' : ''}>Fairway</option>
@@ -75,6 +75,29 @@
         <option value="Recovery" ${preselectedLie === 'Recovery' ? 'selected' : ''}>Recovery</option>
         <option value="Green" ${preselectedLie === 'Green' ? 'selected' : ''}>Green</option>
       </select>
+    </div>
+
+
+    <div class="mb-3" id="hole_${holeNumber}_shot_${newShotNum}_club_wrapper" style="display: none;">
+    <label for="hole_${holeNumber}_shot_${newShotNum}_club" class="form-label custom-form-label">Club:</label>
+    <select class="form-select custom-form-select" 
+            name="hole_${holeNumber}_shot_${newShotNum}_club" 
+            id="hole_${holeNumber}_shot_${newShotNum}_club">
+        <option value="Dr" selected>Driver</option>
+        <option value="3w">3 Wood</option>
+        <option value="5w">5 Wood</option>
+        <option value="3h">3 Hybrid</option>
+        <option value="4h">4 Hybrid</option>
+        <option value="3i">3 Iron</option>
+        <option value="4i">4 Iron</option>
+        <option value="5i">5 Iron</option>
+        <option value="6i">6 Iron</option>
+        <option value="7i">7 Iron</option>
+        <option value="8i">8 Iron</option>
+        <option value="9i">9 Iron</option>
+        <option value="PW">Pitching Wedge</option>
+        <option value="SW">Sand Wedge</option>
+    </select>
     </div>
 
     <!-- Put checkboxes together in a div with your spacing classes -->
@@ -396,101 +419,127 @@ function addDummyShot(holeNumber, shotNumber, penaltyType, par) {
 
         // Create dummy shot HTML
         const dummyShotHTML = `
-            <div class="shot-card mb-3" id="${dummyShotId}">
-                <h5>Shot #${penaltyShotNumber}</h5>
-                <div class="mb-3">
-                    <label for="${dummyShotId}_distance" class="form-label">Distance (yards):</label>
-                    <input 
-                        type="text" 
-                        class="form-control" 
-                        name="${dummyShotId}_distance" 
-                        id="${dummyShotId}_distance" 
-                        value="Penalty" 
-                        readonly
-                    >
-                </div>
-                <div class="mb-3">
-                    <label for="${dummyShotId}_lie" class="form-label">Lie:</label>
-                    <input 
-                        type="text" 
-                        class="form-control" 
-                        name="${dummyShotId}_lie" 
-                        id="${dummyShotId}_lie" 
-                        value="Penalty" 
-                        readonly
-                    >
-                </div>
+        <div class="shot-card mb-3" id="${dummyShotId}">
+            <h5>Shot #${penaltyShotNumber}</h5>
+            <div class="mb-3">
+                <label for="${dummyShotId}_distance" class="form-label">Distance (yards):</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    name="${dummyShotId}_distance" 
+                    id="${dummyShotId}_distance" 
+                    value="Penalty" 
+                    readonly
+                >
             </div>
+            <div class="mb-3">
+                <label for="${dummyShotId}_lie" class="form-label">Lie:</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    name="${dummyShotId}_lie" 
+                    id="${dummyShotId}_lie" 
+                    value="Penalty" 
+                    readonly
+                >
+            </div>
+        </div>
         `;
 
         // Create new shot HTML with prefilled distance and lie
         const replacementShotNumber = getNextShotNumber(holeNumber) + 1;
         const nextShotHTML = `
-            <div class="shot-card mb-3" id="${nextShotId}">
-                <h5>Shot #${replacementShotNumber}</h5>
-                <div class="mb-3">
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_distance" class="form-label">Distance (yards):</label>
-                    <input 
-                        type="number" 
-                        class="form-control" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
-                        value="${currentDistance}" 
-                        required
-                    >
-                </div>
-                <div class="mb-3">
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_lie" class="form-label">Lie:</label>
-                    <select 
-                        class="form-select" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
-                        required
-                    >
-                        <option value="Tee" ${currentLie === "Tee" ? "selected" : ""}>Tee</option>
-                        <option value="Fairway" ${currentLie === "Fairway" ? "selected" : ""}>Fairway</option>
-                        <option value="Rough" ${currentLie === "Rough" ? "selected" : ""}>Rough</option>
-                        <option value="Bunker" ${currentLie === "Bunker" ? "selected" : ""}>Bunker</option>
-                        <option value="Recovery" ${currentLie === "Recovery" ? "selected" : ""}>Recovery</option>
-                        <option value="Green" ${currentLie === "Green" ? "selected" : ""}>Green</option>
-                    </select>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
-                        value="1"
-                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'OOB', ${par})"
-                    >
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" class="form-check-label">Out of Bounds</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input 
-                        type="checkbox" 
-                        class="form-check-input" 
-                        name="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
-                        id="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
-                        value="1"
-                        onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'hazard', ${par})"
-                    >
-                    <label for="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" class="form-check-label">Hazard/Unplayable</label>
-                </div>
-                <button 
-                    type="button" 
-                    class="btn btn-outline-danger btn-sm remove-shot-btn" 
-                    onclick="removeShot(${holeNumber}, ${shotNumber + 1})"
+        <div class="shot-card mb-3" id="${nextShotId}">
+            <h5>Shot #${replacementShotNumber}</h5>
+            <div class="mb-3">
+                <label for="hole_${holeNumber}_shot_${shotNumber + 1}_distance" class="form-label">Distance (yards):</label>
+                <input 
+                    type="number" 
+                    class="form-control" 
+                    name="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
+                    id="hole_${holeNumber}_shot_${shotNumber + 1}_distance" 
+                    value="${currentDistance}" 
+                    required
                 >
-                    Remove Shot
-                </button>
             </div>
+            <div class="mb-3">
+                <label for="hole_${holeNumber}_shot_${shotNumber + 1}_lie" class="form-label">Lie:</label>
+                <select 
+                    class="form-select" 
+                    name="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
+                    id="hole_${holeNumber}_shot_${shotNumber + 1}_lie" 
+                    required
+                    onchange="updateClubSelect(${holeNumber}, ${shotNumber + 1}, ${par});"
+                >
+                    <option value="Tee" ${currentLie === "Tee" ? "selected" : ""}>Tee</option>
+                    <option value="Fairway" ${currentLie === "Fairway" ? "selected" : ""}>Fairway</option>
+                    <option value="Rough" ${currentLie === "Rough" ? "selected" : ""}>Rough</option>
+                    <option value="Bunker" ${currentLie === "Bunker" ? "selected" : ""}>Bunker</option>
+                    <option value="Recovery" ${currentLie === "Recovery" ? "selected" : ""}>Recovery</option>
+                    <option value="Green" ${currentLie === "Green" ? "selected" : ""}>Green</option>
+                </select>
+            </div>
+            <!-- Club dropdown: initially hidden; updateClubSelect will reveal if conditions are met -->
+            <div class="mb-3" id="hole_${holeNumber}_shot_${shotNumber + 1}_club_wrapper" style="display: none;">
+                <label for="hole_${holeNumber}_shot_${shotNumber + 1}_club" class="form-label">Club:</label>
+                <select class="form-select" 
+                        name="hole_${holeNumber}_shot_${shotNumber + 1}_club" 
+                        id="hole_${holeNumber}_shot_${shotNumber + 1}_club">
+                    <option value="Dr" selected>Driver</option>
+                    <option value="3w">3 Wood</option>
+                    <option value="5w">5 Wood</option>
+                    <option value="3h">3 Hybrid</option>
+                    <option value="4h">4 Hybrid</option>
+                    <option value="3i">3 Iron</option>
+                    <option value="4i">4 Iron</option>
+                    <option value="5i">5 Iron</option>
+                    <option value="6i">6 Iron</option>
+                    <option value="7i">7 Iron</option>
+                    <option value="8i">8 Iron</option>
+                    <option value="9i">9 Iron</option>
+                    <option value="PW">Pitching Wedge</option>
+                    <option value="SW">Sand Wedge</option>
+                </select>
+            </div>
+            <div class="form-check form-check-inline">
+                <input 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    name="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
+                    id="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" 
+                    value="1"
+                    onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'OOB', ${par})"
+                >
+                <label for="hole_${holeNumber}_shot_${shotNumber + 1}_out_of_bounds" class="form-check-label">Out of Bounds</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    name="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
+                    id="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" 
+                    value="1"
+                    onchange="addDummyShot(${holeNumber}, ${shotNumber + 1}, 'hazard', ${par})"
+                >
+                <label for="hole_${holeNumber}_shot_${shotNumber + 1}_hazard" class="form-check-label">Hazard/Unplayable</label>
+            </div>
+            <button 
+                type="button" 
+                class="btn btn-outline-danger btn-sm remove-shot-btn" 
+                onclick="removeShot(${holeNumber}, ${shotNumber + 1})"
+            >
+                Remove Shot
+            </button>
+        </div>
         `;
 
         // Insert the dummy shot and the new shot below the current shot
         const currentShotElement = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}`);
         currentShotElement.insertAdjacentHTML("afterend", dummyShotHTML);
         document.getElementById(dummyShotId).insertAdjacentHTML("afterend", nextShotHTML);
+
+        // Immediately update the club dropdown for the newly inserted shot
+        updateClubSelect(holeNumber, shotNumber + 1, par);
 
         updateRemoveShotButtons(holeNumber);
     } 
@@ -612,3 +661,43 @@ function removeShot(holeNumber, shotNumber) {
     // 4) Re-check which shot is now last, show/hide remove buttons
     updateRemoveShotButtons(holeNumber);
 }
+
+
+
+function updateClubSelect(holeNumber, shotNumber, par) {
+    const lieSelect = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_lie`);
+    const clubWrapper = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_club_wrapper`);
+    const clubSelect = document.getElementById(`hole_${holeNumber}_shot_${shotNumber}_club`);
+    if (!lieSelect || !clubWrapper || !clubSelect) return;
+    
+    // When eligible: non-par3 and lie is "Tee" – show and enable the club select.
+    if (par !== 3 && lieSelect.value === "Tee") {
+        clubWrapper.style.display = "block";
+        clubSelect.disabled = false;
+        // Ensure the name attribute is set so its value gets submitted.
+        clubSelect.setAttribute('name', `hole_${holeNumber}_shot_${shotNumber}_club`);
+    } else {
+        clubWrapper.style.display = "none";
+        clubSelect.disabled = true;
+        // Remove the name attribute so the value isn’t submitted.
+        clubSelect.removeAttribute('name');
+        // Clear any default value so that if re-enabled later it doesn’t hold an unwanted value.
+        clubSelect.value = "";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Assuming you have a global variable or a way to determine the number of holes,
+    // You could either loop over a known list of holes or retrieve shot elements dynamically.
+    // Here’s an example using a data attribute from the shot cards.
+    document.querySelectorAll('[id^="hole_"][id$="_shot_1"]').forEach(function(shotCard) {
+        // Extract hole number from id which is in the format "hole_{holeNumber}_shot_1"
+        const idParts = shotCard.id.split('_');
+        const holeNumber = idParts[1];
+        // Here, you must also know the hole's par, which could be stored as a data attribute,
+        // for example: data-par="{{ hole.par }}" in your shot card container. 
+        // If not, method 1 (using inline script in the template) is simpler.
+        const par = parseInt(shotCard.dataset.par); // Make sure to set it in your template.
+        updateClubSelect(holeNumber, 1, par);
+    });
+});
