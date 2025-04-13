@@ -143,7 +143,6 @@ def create_checkout_session():
 def stripe_webhook():
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get("Stripe-Signature")
-    print(sig_header)
 
     try:
         event = stripe.Webhook.construct_event(
@@ -1002,6 +1001,23 @@ def tee_stats():
     dist_result = dist_query.one()
     avg_tee_distance = float(dist_result.avg_tee_distance or 0)
 
+    # ------------------------------------------------------------
+    # 2B) Average Driver Tee Shot Distance (non-Par 3, club = "Driver")
+    # ------------------------------------------------------------
+    driver_query = db.session.query(
+         func.avg(Shot.distance_before - Shot.distance_after).label('avg_driver_distance')
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .join(Hole, Shot.holeID == Hole.holeID)\
+     .filter(
+         Round.userID == current_user.userID,
+         Shot.shot_type == "Off the Tee",
+         Hole.par != 3,
+         Shot.club == "Dr"
+     )
+    driver_result = driver_query.one()
+    print(driver_result)
+    avg_driver_distance = float(driver_result.avg_driver_distance or 0)
+
     # -------------------------------------------------
     # 3) Miss Direction Distribution (Off the Tee)
     # -------------------------------------------------
@@ -1087,10 +1103,76 @@ def tee_stats():
     data = {
         "avg_off_tee_sg": round(avg_off_tee_sg, 2),
         "avg_tee_distance": round(avg_tee_distance, 2),
+        "avg_driver_distance": round(avg_driver_distance, 2),
         "miss_directions": directions,       # e.g. ["Left", "Right", "None", etc.]
         "miss_counts": direction_counts,     # e.g. [10, 5, 2, ...]
         "total_shots": int(total_shots_dir), # total from the miss direction perspective
         "cumulativeLiePct": cumulative_pct   # single number for card
+    }
+    return jsonify(data)
+
+@app.route('/api/tee_miss_direction_dr', methods=['GET'])
+@login_required
+def tee_miss_direction_dr():
+    """
+    Returns the miss direction counts for tee shots (shot_type == "Off the Tee")
+    but only for shots with the club value "Dr".
+    """
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    dr_miss_query = db.session.query(
+        Shot.miss_direction,
+        func.count(Shot.shotID).label("count_dir")
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .filter(
+         Round.userID == current_user.userID,
+         Shot.shot_type == "Off the Tee",
+         Shot.club == "Dr"
+     )
+    
+    if course_id:
+        dr_miss_query = dr_miss_query.filter(Round.course_id == course_id)
+    if round_id:
+        dr_miss_query = dr_miss_query.filter(Round.roundID == round_id)
+    if round_type:
+        dr_miss_query = dr_miss_query.filter(Round.round_type == round_type)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        dr_miss_query = dr_miss_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        dr_miss_query = dr_miss_query.filter(Round.date_played <= end_date)
+
+    dr_miss_query = dr_miss_query.group_by(Shot.miss_direction)
+    dr_miss_results = dr_miss_query.all()
+
+    # Calculate breakdown: for simplicity, use the same algorithm as before:
+    leftCount = 0
+    rightCount = 0
+    centerCount = 0
+    totalShots = 0
+
+    for row in dr_miss_results:
+        direction = row.miss_direction.lower() if row.miss_direction else ""
+        count = row.count_dir
+        totalShots += count
+        if "left" in direction:
+            leftCount += count
+        elif "right" in direction:
+            rightCount += count
+        else:
+            centerCount += count
+
+    # Return the counts (and percentages if desired)
+    data = {
+        "left": leftCount,
+        "right": rightCount,
+        "center": centerCount,
+        "total": totalShots
     }
     return jsonify(data)
 
@@ -1443,9 +1525,7 @@ def short_game_stats():
         shots_by_round_hole[key].sort(key=lambda x: x.shotID)
 
     # ----- Debugging Section Start -----
-    print("----- shots_by_round_hole -----")
     for (round_id, hole_id), shots in shots_by_round_hole.items():
-        print(f"Round ID: {round_id}, Hole ID: {hole_id}")
         shot_list = []
         for shot in shots:
             shot_info = {
@@ -1457,8 +1537,7 @@ def short_game_stats():
                 "Shot Type": shot.shot_type  # Added for clarity
             }
             shot_list.append(shot_info)
-        pprint.pprint(shot_list, indent=4)
-    print("----- End of shots_by_round_hole -----")
+    
     # ----- Debugging Section End -----
 
     # --------------- 4) Prepare Structures for Bunker vs. Non-Bunker ---------------
@@ -1507,9 +1586,6 @@ def short_game_stats():
 
     # --------------- 5) Iterate All Shots and Fill Data ---------------
     for (round_hole_key, shot_list) in shots_by_round_hole.items():
-        # Debug: Print the entire shot list with enumeration
-        print(f"Processing Round {round_hole_key[0]}, Hole {round_hole_key[1]}")
-        print(list(enumerate(shot_list)))
 
         for i, shot in enumerate(shot_list):
             # Only process "Around the Green" shots
@@ -1522,11 +1598,6 @@ def short_game_stats():
             # Find the next shot (any shot type)
             next_shot = shot_list[i+1] if (i+1 < len(shot_list)) else None
 
-            # Debug: Print the next_shot details
-            if next_shot:
-                print(f"Current Shot ID: {shot.shotID}, Next Shot ID: {next_shot.shotID}")
-            else:
-                print(f"Current Shot ID: {shot.shotID}, Next Shot: None")
 
             # Bucket by distance_before
             dist_bin = get_distance_bin(shot.distance_before)

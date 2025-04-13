@@ -374,7 +374,10 @@ async function updateStrokesGainedChart(params) {
     .text((d, i) => sgData.labels[i]);
 }
 
+
+
 async function updateTeeStats(params, statsData) {
+  // Fetch overall tee stats.
   const teeRes = await fetch(`/api/tee_stats?${params.toString()}`);
   const teeData = await teeRes.json();
 
@@ -386,10 +389,19 @@ async function updateTeeStats(params, statsData) {
     teeSGCard.textContent = teeData.avg_off_tee_sg > 0 
       ? `+${teeData.avg_off_tee_sg}` 
       : teeData.avg_off_tee_sg;
-    teeDistanceCard.textContent = Math.round(teeData.avg_tee_distance) + "yds";
+    teeDistanceCard.textContent = Math.round(teeData.avg_tee_distance) + " yds";
     document.getElementById("teeLieCard").textContent = teeData.cumulativeLiePct + "%";
   }
 
+  // Update Driver Distance Card.
+  const driverDistanceCard = document.getElementById("driverDistanceCard");
+  if (statsData.total_rounds === 0) {
+    driverDistanceCard.textContent = "--";
+  } else {
+    driverDistanceCard.textContent = Math.round(teeData.avg_driver_distance) + " yds";
+  }
+
+  // Update overall Fairway Miss Direction Visualization.
   let leftCount = 0, rightCount = 0, centerCount = 0;
   const directions = teeData.miss_directions;
   const counts = teeData.miss_counts;
@@ -419,6 +431,40 @@ async function updateTeeStats(params, statsData) {
     document.getElementById("rightMissSection").style.left = `${leftPct + centerPct}%`;
     document.getElementById("rightMissSection").textContent = rightCount > 0 ? `Right ${rightPct.toFixed(1)}%` : "";
   }
+
+  // NEW: Update Driver Miss Direction Visualization within updateTeeStats.
+try {
+  const driverRes = await fetch(`/api/tee_miss_direction_dr?${params.toString()}`);
+  const drData = await driverRes.json();
+
+  // Calculate percentages, if any shots exist.
+  const totalDr = drData.total;
+  const leftDrPct = totalDr > 0 ? (drData.left / totalDr * 100).toFixed(1) : 0;
+  const centerDrPct = totalDr > 0 ? (drData.center / totalDr * 100).toFixed(1) : 0;
+  const rightDrPct = totalDr > 0 ? (drData.right / totalDr * 100).toFixed(1) : 0;
+
+  // Update the driver-specific visualization elements.
+  const driverLeftSection = document.getElementById("driverLeftSection");
+  const driverCenterSection = document.getElementById("driverCenterSection");
+  const driverRightSection = document.getElementById("driverRightSection");
+
+  // Set widths as percentages.
+  driverLeftSection.style.width = `${leftDrPct}%`;
+  driverCenterSection.style.width = `${centerDrPct}%`;
+  driverRightSection.style.width = `${rightDrPct}%`;
+
+  // Set left positions so that elements line up correctly:
+  driverLeftSection.style.left = "0%";
+  driverCenterSection.style.left = `${leftDrPct}%`;
+  driverRightSection.style.left = `${Number(leftDrPct) + Number(centerDrPct)}%`;
+
+  // Set text content if there are counts.
+  driverLeftSection.textContent = drData.left > 0 ? `Left ${leftDrPct}%` : "";
+  driverCenterSection.textContent = drData.center > 0 ? `Fairway ${centerDrPct}%` : "";
+  driverRightSection.textContent = drData.right > 0 ? `Right ${rightDrPct}%` : "";
+} catch (err) {
+  console.error("Error updating driver miss direction visualization:", err);
+}
 }
 
 async function updateApproachStats(params, statsData) {
@@ -1180,6 +1226,8 @@ async function updateDashboard() {
   
   // 8) Distance Histogram (Responsive: vertical for small screens, horizontal for larger)
   await updateDistanceHistogramResponsive(params);
+
+  await updateDriverMissDirection(params);
 
 
 
