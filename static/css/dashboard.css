@@ -238,3 +238,21 @@
     color: #333;
   }
   
+  .responsive-chart {
+    width: 100%;
+    max-width: 300px; /* Adjust as needed */
+    margin: 1px 1px 1px 1px;
+  }
+
+
+  .x-label, .bar-label {
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 20px;
+  }
+
+
+
+
+
+

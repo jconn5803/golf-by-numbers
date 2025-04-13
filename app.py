@@ -33,7 +33,7 @@ from config import DevelopmentConfig, ProductionConfig  # or ProductionConfig fo
 load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(ProductionConfig)  # Use ProductionConfig in production
+app.config.from_object(DevelopmentConfig)  # Use ProductionConfig in production
 
 # Initialize your database and migrations after configuration is set.
 init_app(app)
@@ -45,14 +45,208 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'  # Redirect users to the login page if not logged in
 
+# Stripe api keys
+stripe_keys = {
+    "secret_key": os.environ["STRIPE_SECRET_KEY"],
+    "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
+    "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"],
+    "price_id": os.environ["STRIPE_MONTHLY_PRICE_ID"],
+    "annual_price_id": os.environ["STRIPE_ANNUAL_PRICE_ID"],
+    "daily_price_id": os.environ["STRIPE_DAILY_PRICE_ID"],
+}
+
+stripe.api_key = stripe_keys["secret_key"]
+
 @login_manager.user_loader
 def load_user(userID):
     return User.query.get(int(userID))
+
+# Custom wrapper function to make sure that a user is subscribed
+def subscription_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if the user is logged in and has an active subscription
+        if not current_user.is_authenticated or not current_user.subscription_active:
+            flash("You need an active subscription to access this page.", "warning")
+            return redirect(url_for('recurring_payment_demo'))  # 'subscribe' is the route for subscription info
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Recurring Payment Demo Page
+@app.route("/recurring_payment_demo")
+def recurring_payment_demo():
+    return render_template("recurring_payment_demo.html")
+
+# Recurring Payment Demo Page
+@app.route("/recurring_payment_demo_success")
+def recurring_payment_demo_success():
+    return render_template("recurring_payment_demo_success.html")
+
+# Recurring Payment Demo Page
+@app.route("/recurring_payment_demo_cancelled")
+def recurring_payment_demo_cancelled():
+    return render_template("recurring_payment_demo_cancelled.html")
+
+
+@app.route("/config")
+def get_publishable_key():
+    stripe_config = {"publicKey": stripe_keys["publishable_key"]}
+    return jsonify(stripe_config)
+
+@app.route("/create-checkout-session")
+def create_checkout_session():
+
+    
+
+    # Get the product type from the query string; default to "monthly"
+    product_type = request.args.get("product_type", "monthly")
+    
+    # Choose the price ID based on the product type
+    if product_type == "annual":
+        price_id = stripe_keys["annual_price_id"]
+    if product_type == "daily":
+        price_id = stripe_keys["daily_price_id"]
+    else: # This is monthly
+        price_id = stripe_keys["price_id"]
+
+    domain_url = "http://127.0.0.1:5000/recurring_payment_demo"
+    stripe.api_key = stripe_keys["secret_key"]
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            # you should get the user id here and pass it along as 'client_reference_id'
+            #
+            # this will allow you to associate the Stripe session with
+            # the user saved in your database
+            #
+            # example: client_reference_id=user.id,
+            client_reference_id=current_user.get_id(),
+            success_url=domain_url + "_success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=domain_url + "_cancel",
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[
+                {
+                    "price": price_id,
+                    "quantity": 1,
+                }
+            ]
+        )
+        return jsonify({"sessionId": checkout_session["id"]})
+    except Exception as e:
+        return jsonify(error=str(e)), 403
+
+
+
+@app.route("/stripe-webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature")
+    print(sig_header)
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, stripe_keys["endpoint_secret"]
+        )
+        data = event['data']
+
+    except ValueError as e:
+        # Invalid payload
+        return "Invalid payload", 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        return "Invalid signature", 400
+
+    # Handle the checkout.session.completed event
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+
+        # Fulfill the purchase...
+        handle_checkout_session(session)
+
+    elif event["type"] == "invoice.paid":
+        invoice = event["data"]["object"]
+        # Retrieve the customer ID from the invoice.
+        customer_id = invoice.get("customer")
+        # Look up the user by their Stripe customer ID.
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Mark the subscription as active (1).
+            user.subscription_active = True
+            db.session.commit()
+            print("Invoice paid: Subscription active for user", user.get_id())
+        else:
+            print("Invoice paid: No user found for customer", customer_id)
+
+
+    elif event["type"] == "invoice.payment_failed":
+        invoice = event["data"]["object"]
+        customer_id = invoice.get("customer")
+        # Look up the user by their Stripe customer ID.
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Mark the subscription as inactive (0).
+            user.subscription_active = False
+            db.session.commit()
+            print("Invoice payment failed: Subscription inactive for user", user.get_id())
+        else:
+            print("Invoice payment failed: No user found for customer", customer_id)
+
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        customer_id = subscription.get("customer")
+        # Look up the user by their Stripe customer ID.
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Mark the subscription as inactive and remove the subscription plan.
+            user.subscription_active = False
+            user.subscription_plan = None
+            db.session.commit()
+            print("Subscription deleted: Updated user", user.get_id())
+        else:
+            print("Subscription deleted: No user found for customer", customer_id)
+
+    else:
+        print("Unhandled event type {}".format(event["type"]))
+
+    return "Success", 200
+
+
+def handle_checkout_session(session):
+    # Retrieve the user ID from the checkout session.
+    # Ensure you pass the client_reference_id when creating the checkout session.
+    user_id = session.get("client_reference_id")
+    if not user_id:
+        print("No client_reference_id found in session.")
+        return
+
+    # Fetch the user from your database.
+    user = User.query.get(int(user_id))
+    if not user:
+        print(f"User with id {user_id} not found.")
+        return
+
+    # Update the user's subscription details using data from the Stripe session.
+    # The 'customer' field holds the Stripe customer ID.
+    # The 'subscription' field holds the subscription ID (or plan details if needed).
+    user.stripe_customer_id = session.get("customer")
+    user.subscription_active = True
+    user.subscription_plan = session.get("subscription")  # Optionally, retrieve more details via Stripe API if needed
+
+    # Commit the changes to the database.
+    db.session.commit()
+    print("User subscription details updated successfully.")
+
 
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/pricing')
+def pricing():
+    return render_template('pricing.html')
 
 
 # Route for user signup
@@ -438,6 +632,7 @@ def my_rounds():
 
 @app.route('/dashboard')
 @login_required
+@subscription_required
 def dashboard():
     """
     Renders the main dashboard page with filters and placeholder for charts/cards.
@@ -508,6 +703,83 @@ def sg_by_shot_type():
         "values": values
     }
     return jsonify(data)
+
+@app.route('/api/last50_approach', methods=['GET'])
+@login_required
+def last50_approach():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_approach": float(r.sg_approach or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+@app.route('/api/last50_offtee', methods=['GET'])
+@login_required
+def last50_offtee():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_off_tee": float(r.sg_off_tee or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+@app.route('/api/last50_around_green', methods=['GET'])
+@login_required
+def last50_around_green():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_around_green": float(r.sg_around_green or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
+@app.route('/api/last50_putting', methods=['GET'])
+@login_required
+def last50_putting():
+    rounds = (Round.query.filter_by(userID=current_user.userID)
+              .order_by(Round.date_played.desc())
+              .limit(50)
+              .all())
+    rounds = sorted(rounds, key=lambda r: r.date_played)
+    data = [
+        {
+            "roundID": r.roundID,
+            "date_played": r.date_played.strftime('%Y-%m-%d'),
+            "sg_putting": float(r.sg_putting or 0),
+            "course_name": r.course.name
+        }
+        for r in rounds
+    ]
+    return jsonify(data)
+
 
 
 @app.route('/api/dashboard_stats', methods=['GET'])
@@ -1504,10 +1776,14 @@ def putting_stats():
 def distance_histogram():
     """
     Returns histogram data of distance_before (converted to yards if lie_before='Green') 
-    in 5-yard bins from 0 to 600.
+    using custom bins:
+      - First bin: 1–3 yards,
+      - Second bin: 3–5 yards,
+      - Then 5-yard bins from 5 up to 600 yards.
+    Each bin includes the average strokes gained (sg) for shots in that range.
+    Only shots > 1 yard are considered.
     Applies the same filters (course, round, date range) as the rest of the dashboard.
     """
-
     # 1) Parse request args (filters)
     course_id = request.args.get('course', type=int)
     round_id = request.args.get('round', type=int)
@@ -1516,11 +1792,10 @@ def distance_histogram():
     end_date_str = request.args.get('endDate')
 
     # 2) Query Shots joined with Round so we can filter by user & the same dashboard filters
-    shot_query = (db.session.query(Shot.distance_before, Shot.lie_before)
+    shot_query = (db.session.query(Shot.distance_before, Shot.lie_before, Shot.strokes_gained)
                   .join(Round, Shot.roundID == Round.roundID)
                   .filter(Round.userID == current_user.userID))
 
-    # Apply filters
     if course_id:
         shot_query = shot_query.filter(Round.course_id == course_id)
     if round_id:
@@ -1536,52 +1811,77 @@ def distance_histogram():
 
     shots = shot_query.all()
 
-    # 3) Convert distances to yards if lie_before = 'Green', otherwise assume distance_before is already in yards
+    # 3) Process distances and strokes gained.
     distances_yards = []
-    for (dist_before, lie_before) in shots:
+    strokes_gained_list = []
+    for (dist_before, lie_before, sg) in shots:
         if lie_before == "Green":
-            # dist_before is in FEET, so divide by 3 to convert to yards
+            # Convert from feet to yards.
             dist_yards = dist_before / 3.0
         else:
             dist_yards = dist_before
-        # Clip at 600 if you want to ensure no out-of-bounds beyond 600 
-        # (or just trust that you won't have any >600)
+        # Clip distances to be within 0 and 600 yards.
         if dist_yards < 0:
             dist_yards = 0
         elif dist_yards > 600:
             dist_yards = 600
         distances_yards.append(dist_yards)
+        strokes_gained_list.append(sg)
 
-    # 4) Bin the distances in 5-yard increments from 0–5, 5–10, ... up to 600
-    #    We'll create a list of bin edges (0,5,10,...,600).
-    bin_size = 5
-    max_yards = 600
-    num_bins = max_yards // bin_size  # 600//5=120
-    # We'll store counts in each bin index. 
-    bin_counts = [0] * num_bins  # 120 bins
-    # We'll also build labels like "0-5", "5-10", ...
-    bin_labels = []
+    # 4) Define custom bins.
+    # First bin: 1 to 3 yards, second bin: 3 to 5 yards.
+    custom_bins = [(1, 3), (3, 5)]
+    # Then, add 5-yard bins from 5 up to 600.
+    for lower in range(5, 600, 5):
+        custom_bins.append((lower, lower + 5))
+    num_bins = len(custom_bins)
+    bin_labels = [f"{lb}-{ub}" for (lb, ub) in custom_bins]
+    bin_counts = [0] * num_bins
+    bin_total_sg = [0.0] * num_bins
+
+    # 5) Increment counts and accumulate strokes gained for each shot.
+    for dist_y, sg in zip(distances_yards, strokes_gained_list):
+        # Only consider shots > 1 yard.
+        if dist_y <= 1:
+            continue
+        assigned = False
+        for i, (lb, ub) in enumerate(custom_bins):
+            # For all bins except the last, include shot if lb <= dist < ub.
+            # For the last bin, include shot if lb <= dist <= ub.
+            if i == num_bins - 1:
+                if lb <= dist_y <= ub:
+                    bin_counts[i] += 1
+                    bin_total_sg[i] += sg
+                    assigned = True
+                    break
+            else:
+                if lb <= dist_y < ub:
+                    bin_counts[i] += 1
+                    bin_total_sg[i] += sg
+                    assigned = True
+                    break
+        # (If not assigned, the shot is skipped.)
+        if not assigned:
+            continue
+
+    # 6) Compute average strokes gained per bin.
+    bin_avg_sg = []
     for i in range(num_bins):
-        left_edge = i * bin_size
-        right_edge = left_edge + bin_size
-        label = f"{left_edge}-{right_edge}"
-        bin_labels.append(label)
+        if bin_counts[i] > 0:
+            avg_sg = bin_total_sg[i] / bin_counts[i]
+        else:
+            avg_sg = 0.0
+        bin_avg_sg.append(avg_sg)
 
-    # 5) Increment counts for each shot
-    for dist_y in distances_yards:
-        # Which bin does this distance fall into?
-        bin_index = int(dist_y // bin_size)  # e.g. dist_y=12 => bin_index=2 (for 10–15)
-        # Edge case: dist_y=600 => bin_index=120; but our bins go up to index=119
-        if bin_index == num_bins: 
-            bin_index = num_bins - 1  # Put it into the last bin
-        bin_counts[bin_index] += 1
-
-    # 6) Return JSON
+    # 7) Return JSON with bin labels, counts, and average strokes gained.
     data = {
-        "bin_labels": bin_labels,  # e.g. ["0-5", "5-10", ..., "595-600"]
-        "bin_counts": bin_counts   # e.g. [12, 42, 18, ...]
+        "bin_labels": bin_labels,
+        "bin_counts": bin_counts,
+        "bin_avg_sg": bin_avg_sg
     }
     return jsonify(data)
+
+
 
 
 @app.route('/get_tees/<int:course_id>')
