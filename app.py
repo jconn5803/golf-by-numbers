@@ -244,6 +244,10 @@ def handle_checkout_session(session):
 def index():
     return render_template('index.html')
 
+@app.route('/pricing')
+def pricing():
+    return render_template('pricing.html')
+
 
 # Route for user signup
 @app.route('/register', methods=['GET', 'POST'])
