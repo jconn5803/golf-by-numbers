@@ -374,7 +374,40 @@ async function updateStrokesGainedChart(params) {
     .text((d, i) => sgData.labels[i]);
 }
 
-
+async function updateNonDrMissDirection(params) {
+  try {
+    const res = await fetch(`/api/tee_miss_direction_non_dr?${params.toString()}`);
+    const nonDrData = await res.json();
+    
+    // Calculate percentages for non-driver miss direction visualization.
+    const totalNonDr = nonDrData.total;
+    const leftNonDrPct = totalNonDr > 0 ? (nonDrData.left / totalNonDr * 100).toFixed(1) : 0;
+    const centerNonDrPct = totalNonDr > 0 ? (nonDrData.center / totalNonDr * 100).toFixed(1) : 0;
+    const rightNonDrPct = totalNonDr > 0 ? (nonDrData.right / totalNonDr * 100).toFixed(1) : 0;
+    
+    // Update the HTML elements.
+    const nonDrLeftSection = document.getElementById("nonDrLeftSection");
+    const nonDrCenterSection = document.getElementById("nonDrCenterSection");
+    const nonDrRightSection = document.getElementById("nonDrRightSection");
+    
+    // Set widths.
+    nonDrLeftSection.style.width = `${leftNonDrPct}%`;
+    nonDrCenterSection.style.width = `${centerNonDrPct}%`;
+    nonDrRightSection.style.width = `${rightNonDrPct}%`;
+    
+    // Set left offsets so that elements line up as in the overall fairway visualization.
+    nonDrLeftSection.style.left = "0%";
+    nonDrCenterSection.style.left = `${leftNonDrPct}%`;
+    nonDrRightSection.style.left = `${Number(leftNonDrPct) + Number(centerNonDrPct)}%`;
+    
+    // Update text content.
+    nonDrLeftSection.textContent = nonDrData.left > 0 ? `Left ${leftNonDrPct}%` : "";
+    nonDrCenterSection.textContent = nonDrData.center > 0 ? `Fairway ${centerNonDrPct}%` : "";
+    nonDrRightSection.textContent = nonDrData.right > 0 ? `Right ${rightNonDrPct}%` : "";
+  } catch (err) {
+    console.error("Error updating non-driver miss direction visualization:", err);
+  }
+}
 
 async function updateTeeStats(params, statsData) {
   // Fetch overall tee stats.
@@ -676,7 +709,7 @@ function createApproachMissChart(missData, approachData) {
   const container = d3.select("#approachMissChart");
   const containerWidth = container.node().clientWidth || 400;
   const widthD3 = containerWidth;
-  const heightD3 = containerWidth; // Use a square chart; adjust as needed.
+  const heightD3 = 400; // Use a square chart; adjust as needed.
   const marginD3 = 20;
   const radius = Math.min(widthD3, heightD3) / 2 - marginD3;
 
@@ -1178,6 +1211,54 @@ async function updateDistanceHistogramVertical(params) {
     .text("Count of Shots");
 }
 
+
+// New function to update the Approach Miss Direction chart based on distance filters.
+async function updateApproachMissChartWithDistance() {
+  // Build URL parameters for the API call.
+  const params = new URLSearchParams();
+
+  const minDistance = document.getElementById("minDistanceApproach").value;
+  const maxDistance = document.getElementById("maxDistanceApproach").value;
+
+  // Only add parameters if values are provided.
+  if (minDistance) {
+    params.set("min_distance", minDistance);
+  }
+  if (maxDistance) {
+    params.set("max_distance", maxDistance);
+  }
+
+  try {
+    // Call your modified /api/approach_stats endpoint with the distance filters.
+    const response = await fetch(`/api/approach_stats?${params.toString()}`);
+    const approachData = await response.json();
+
+    // Calculate percentages for the miss directions.
+    const totalApproachShots = approachData.total_approach_shots;
+    const missData = approachData.miss_directions.map((dir, i) => {
+      const count = approachData.miss_counts[i];
+      const percentage = totalApproachShots > 0 ? ((count / totalApproachShots) * 100).toFixed(1) : 0;
+      return { direction: dir, frequency: count, percentage: percentage };
+    });
+
+    // Clear any existing chart in the container.
+    d3.select("#approachMissChart").selectAll("*").remove();
+
+    // Create the updated pie/miss chart.
+    // (This function remains similar to your existing createApproachMissChart, 
+    //  but now assumes that it will render the chart into "#approachMissChart".)
+    createApproachMissChart(missData, approachData);
+  } catch (err) {
+    console.error("Error updating approach miss chart by distance:", err);
+  }
+}
+
+// Attach event listener to the update button.
+document.getElementById("updateApproachMissBtn").addEventListener("click", function(e) {
+  e.preventDefault(); // Prevent any default form submission behavior.
+  updateApproachMissChartWithDistance();
+});
+
 //────────────────────────────
 // Responsive Histogram Selector
 //────────────────────────────
@@ -1227,7 +1308,7 @@ async function updateDashboard() {
   // 8) Distance Histogram (Responsive: vertical for small screens, horizontal for larger)
   await updateDistanceHistogramResponsive(params);
 
-  await updateDriverMissDirection(params);
+  await updateNonDrMissDirection(params);
 
 
 

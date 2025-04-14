@@ -1176,6 +1176,75 @@ def tee_miss_direction_dr():
     }
     return jsonify(data)
 
+@app.route('/api/tee_miss_direction_non_dr', methods=['GET'])
+@login_required
+def tee_miss_direction_non_dr():
+    """
+    Returns the miss direction counts for tee shots that are:
+     - Off the Tee,
+     - Played on non-par-3 holes (Hole.par != 3),
+     - With a club value NOT equal to "Dr".
+    """
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    non_dr_miss_query = db.session.query(
+        Shot.miss_direction,
+        func.count(Shot.shotID).label("count_dir")
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .join(Hole, Shot.holeID == Hole.holeID)\
+     .filter(
+         Round.userID == current_user.userID,
+         Shot.shot_type == "Off the Tee",
+         Hole.par != 3,
+         Shot.club != "Dr"
+     )
+    
+    if course_id:
+        non_dr_miss_query = non_dr_miss_query.filter(Round.course_id == course_id)
+    if round_id:
+        non_dr_miss_query = non_dr_miss_query.filter(Round.roundID == round_id)
+    if round_type:
+        non_dr_miss_query = non_dr_miss_query.filter(Round.round_type == round_type)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        non_dr_miss_query = non_dr_miss_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        non_dr_miss_query = non_dr_miss_query.filter(Round.date_played <= end_date)
+
+    non_dr_miss_query = non_dr_miss_query.group_by(Shot.miss_direction)
+    non_dr_results = non_dr_miss_query.all()
+
+    # Aggregate the counts.
+    leftCount = 0
+    rightCount = 0
+    centerCount = 0
+    total_count = 0
+
+    for row in non_dr_results:
+        direction = (row.miss_direction or "").lower()
+        count = row.count_dir
+        total_count += count
+        if "left" in direction:
+            leftCount += count
+        elif "right" in direction:
+            rightCount += count
+        else:
+            centerCount += count
+
+    data = {
+        "left": leftCount,
+        "right": rightCount,
+        "center": centerCount,
+        "total": total_count
+    }
+    return jsonify(data)
+
+
 @app.route('/api/approach_stats', methods=['GET'])
 @login_required
 def approach_stats():
@@ -1191,6 +1260,10 @@ def approach_stats():
     round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
+
+    # Add in the option to filter the api request to certain distances
+    min_distance = request.args.get('min_distance', type=float)
+    max_distance = request.args.get('max_distance', type=float)
 
     # ---------------------------
     # 1) Average Approach SG
@@ -1224,6 +1297,13 @@ def approach_stats():
         Shot.lie_after
     ).join(Round, Shot.roundID == Round.roundID)\
       .filter(Round.userID == current_user.userID, Shot.shot_type == "Approach", Shot.lie_before != "Recovery")
+
+    # Apply distance filters if they are provided:
+    if min_distance is not None:
+        shot_query = shot_query.filter(Shot.distance_before >= min_distance)
+    if max_distance is not None:
+        shot_query = shot_query.filter(Shot.distance_before <= max_distance)
+
 
     if course_id:
         shot_query = shot_query.filter(Round.course_id == course_id)
