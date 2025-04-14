@@ -16,6 +16,7 @@ class Shot(db.Model):
     strokes_gained = db.Column(db.Float, nullable=False)
     miss_direction = db.Column(db.String, default = "None")
     club = db.Column(db.String(50), nullable=True)
+    short_sided = db.Column(db.Boolean, nullable=True)
 
     # Relationships
     round = relationship("Round", back_populates="shots")

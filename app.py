@@ -461,7 +461,6 @@ def add_round():
     courses = Course.query.all()
     return render_template('add_round.html', courses=courses)
 
-from flask import jsonify
 
 # Add a route to put the shots in
 @app.route('/add_shots/<int:roundID>', methods=['GET', 'POST'])
@@ -473,60 +472,56 @@ def add_shots(roundID):
     holes = Hole.query.filter_by(courseID=course.courseID, teeID=tee_id).order_by(Hole.number).all()
 
     if request.method == 'POST':
-        # Initialise the score for the round
         round_score = 0
-        # 1) Insert Shots + Track Shots per Hole
+
+        # We'll store all new shots here temporarily before adding to DB
+        all_new_shots = []
+
         for hole in holes:
-            # Initialise Hole score - which is tracked as a sum of shots and penalty shots
             num_shots = 1
             hole_penalty_shots = 0
+
+            # We'll keep track of the "real" shots in this hole
+            hole_shots_list = []
+
             while True:
                 distance_str = request.form.get(f"hole_{hole.number}_shot_{num_shots}_distance")
                 lie = request.form.get(f"hole_{hole.number}_shot_{num_shots}_lie")
-                out_of_bounds = request.form.get(f"hole_{hole.number}_shot_{num_shots}_out_of_bounds") == "1"
-                hazard = request.form.get(f"hole_{hole.number}_shot_{num_shots}_hazard") == "1"
-
                 if not distance_str or not lie:
-                    # We break if the fields for shot #num_shots are missing.
+                    # If these fields are missing, we're done with this hole
                     break
 
                 distance = float(distance_str)
+                out_of_bounds = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_out_of_bounds") == "1")
+                hazard = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_hazard") == "1")
+                miss_direction = request.form.get(
+                    f"hole_{hole.number}_shot_{num_shots}_miss_direction", "None"
+                )
+                club = request.form.get(f"hole_{hole.number}_shot_{num_shots}_club", None)
 
-                # Code to specify what happens if OOB selected
+                # Check if short_sided was checked in the form
+                short_sided = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_short_sided") == "1")
+
+                # figure out distance_after/lie_after
+                distance_after = 0.0
+                lie_after = "In the Hole"
+                if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance"):
+                    distance_after = float(request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance"))
+                if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_lie"):
+                    lie_after = request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_lie")
+
+                # Calculate strokes gained
                 if out_of_bounds:
-                    lie_after = "OOB"  # Condition already written into SG function
-                    distance_after = distance  # Still the same distance away
-                    sg = SG_calculator(distance, lie, distance_after, lie_after)
+                    sg = SG_calculator(distance, lie, distance_after, "OOB")
                     hole_penalty_shots += 1
                 else:
-                    distance_after = (
-                        float(request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance", 0))
-                        if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance")
-                        else 0
-                    )
-                    lie_after = request.form.get(
-                        f"hole_{hole.number}_shot_{num_shots + 1}_lie",
-                        "In the Hole"
-                    )
-
-                    # Calculate the strokes gained normally
                     sg = SG_calculator(distance, lie, distance_after, lie_after)
 
                 if hazard:
-                    sg -= 1  # Subtract 1 if end up in a hazard
+                    sg -= 1
                     hole_penalty_shots += 1
-                    lie_after = "Hazard"  # Change lie_after to Hazard after SG calculation
-
-                miss_direction = request.form.get(
-                    f"hole_{hole.number}_shot_{num_shots}_miss_direction",
-                    "None"
-                )
 
                 shot_type = shot_type_func(lie=lie, distance=distance, par=hole.par)
-
-                # Retrieve the club value from the form.
-                # This value is only provided if the club dropdown was displayed (non-par 3 hole and lie is 'Tee').
-                club = request.form.get(f"hole_{hole.number}_shot_{num_shots}_club", None)
 
                 new_shot = Shot(
                     roundID=roundID,
@@ -538,66 +533,77 @@ def add_shots(roundID):
                     shot_type=shot_type,
                     strokes_gained=sg,
                     miss_direction=miss_direction,
-                    club=club  # Store the club value (or None if not provided)
+                    club=club,
+                    short_sided=short_sided  # <-- store the user’s checkbox
                 )
-                db.session.add(new_shot)
 
-                # Increment num_shots so that when we break, num_shots is one higher than the valid shots.
+                # Add to our hole-local list
+                hole_shots_list.append(new_shot)
                 num_shots += 1
 
-            # Compute the actual hole score (num_shots - 1) including penalty shots.
-            hole_score = num_shots - 1 + hole_penalty_shots
-            # Add the hole score to the round score.
+            # Now that we have the hole’s shots in hole_shots_list, 
+            #  check if any shot has short_sided=1. If so, 
+            #  set the preceding shot's short_sided=1 if that preceding shot is Approach.
+            for i, s in enumerate(hole_shots_list):
+                if s.short_sided:
+                    # If this shot is short_sided, mark the previous shot if it is approach
+                    if i > 0:  # there is a previous shot
+                        prev_shot = hole_shots_list[i - 1]
+                        if prev_shot.shot_type == "Approach":
+                            prev_shot.short_sided = True
+
+            # Now we can add them all to the DB and compute the hole’s score
+            # note: hole_score = (# of real shots) + penaltyShots
+            hole_score = len(hole_shots_list) + hole_penalty_shots
             round_score += hole_score
 
+            # Add to the master list
+            all_new_shots.extend(hole_shots_list)
+
+            # If hole_score > 0, update the holeStats
             if hole_score > 0:
-                # Find or create HoleStats for this round+hole.
-                hole_stat = HoleStats.query.filter_by(
-                    roundID=roundID, 
-                    holeID=hole.holeID
-                ).first()
+                hole_stat = HoleStats.query.filter_by(roundID=roundID, holeID=hole.holeID).first()
                 if not hole_stat:
                     hole_stat = HoleStats(roundID=roundID, holeID=hole.holeID)
                     db.session.add(hole_stat)
-
                 hole_stat.hole_score = hole_score
+
+        # Once all holes are processed, insert the new shots
+        for shot in all_new_shots:
+            db.session.add(shot)
 
         db.session.commit()
 
-        # Update the fw hit/ gir hit
+        # Then do any post-processing updates, e.g. GIR/fairway, aggregated strokes gained, etc.
         update_gir_fairway(roundID, holes)
+        sg_off_tee = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Off the Tee"
+        ).scalar() or 0.0
+        sg_approach = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Approach"
+        ).scalar() or 0.0
+        sg_around_green = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Around the Green"
+        ).scalar() or 0.0
+        sg_putting = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Putting"
+        ).scalar() or 0.0
 
-        # 2. Once all shots are inserted, compute aggregated Strokes Gained:
-        sg_off_tee = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Off the Tee").scalar() or 0.0
-
-        sg_approach = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Approach").scalar() or 0.0
-
-        sg_around_green = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Around the Green")\
-            .scalar() or 0.0
-
-        sg_putting = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Putting").scalar() or 0.0
-
-        # 3. Update Round table with aggregated stats
         round_data.sg_off_tee = sg_off_tee
         round_data.sg_approach = sg_approach
         round_data.sg_around_green = sg_around_green
         round_data.sg_putting = sg_putting
         round_data.score = round_score
 
-        # Compute the round score to par.
+        # Compute round score to par
         this_tee = Tee.query.get_or_404(tee_id)
         round_data.score_to_par = round_score - this_tee.course_par
 
         db.session.commit()
-
         return redirect('/dashboard')
 
+    # GET request - just render the template
     return render_template('add_shots.html', round_data=round_data, course=course, tee_id=tee_id, holes=holes)
-
 
 # Route where the user's rounds are stored
 @app.route('/my_rounds', methods=['GET', 'POST'])
