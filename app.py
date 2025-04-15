@@ -2036,6 +2036,271 @@ def distance_histogram():
     }
     return jsonify(data)
 
+@app.route('/api/putts_1to15_make_rate', methods=['GET'])
+@login_required
+def putts_1to15_make_rate():
+    """
+    Returns an array of length 15, where each entry has:
+      {
+        "distance": i,               # i = 1..15
+        "makeRate": float,           # in percent
+        "avgStrokesGained": float    # average SG for putts at this distance
+      }
+    Only includes shots with lie_before='Green' (i.e. on the green) 
+    and shot_type='Putting', ignoring distances outside 1..15 feet.
+    Respects the same filters as the main dashboard (course, round, etc.).
+    """
+    import math
+
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    # Build query of Shots joined with Round.
+    # We want putting shots on the green, ignoring distance <1 or >15 feet.
+    query = (
+        db.session.query(Shot)
+        .join(Round, Shot.roundID == Round.roundID)
+        .filter(
+            Round.userID == current_user.userID,
+            Shot.lie_before == "Green",    # On green before putt
+            Shot.shot_type == "Putting"    # Marked as putting shots
+        )
+    )
+
+    # Apply filters
+    if course_id:
+        query = query.filter(Round.course_id == course_id)
+    if round_id:
+        query = query.filter(Round.roundID == round_id)
+    if round_type:
+        query = query.filter(Round.round_type == round_type)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            query = query.filter(Round.date_played >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid startDate format. Use YYYY-MM-DD."}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            query = query.filter(Round.date_played <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid endDate format. Use YYYY-MM-DD."}), 400
+
+    # Fetch all relevant shots
+    shots = query.all()
+
+    # Prepare bins for distances 1..15 feet
+    # Each bin: { totalShots, totalMakes, sumSG }
+    bins = []
+    for i in range(1, 16):
+        bins.append({
+            "distance": i,
+            "countShots": 0,
+            "countMakes": 0,
+            "sumSG": 0.0
+        })
+
+    # Populate bins
+    for s in shots:
+        # distance_before is in feet already if lie_before == "Green"
+        dist_foot = int(math.floor(s.distance_before or 0))
+        if dist_foot < 1 or dist_foot > 15:
+            continue  # skip anything outside 1..15
+
+        index = dist_foot - 1  # 0-based index in the bins array
+        bins[index]["countShots"] += 1
+        bins[index]["sumSG"] += (s.strokes_gained or 0.0)
+
+        # If putt ended in hole, that’s a make
+        if s.lie_after == "In the Hole":
+            bins[index]["countMakes"] += 1
+
+    # Compute final makeRate% and avgStrokesGained for each bin
+    output = []
+    for b in bins:
+        cShots = b["countShots"]
+        if cShots > 0:
+            makeRate = (b["countMakes"] / cShots) * 100.0
+            avgSG = b["sumSG"] / cShots
+        else:
+            makeRate = 0.0
+            avgSG = 0.0
+
+        output.append({
+            "distance": b["distance"],
+            "makeRate": round(makeRate, 1),
+            "avgStrokesGained": round(avgSG, 2)
+        })
+
+    return jsonify(output)
+
+
+@app.route('/api/three_putt_percent', methods=['GET'])
+@login_required
+def three_putt_percent():
+    """
+    Returns JSON array of objects like:
+      [
+        {
+          "bracket": "15-20",
+          "threePuttPercent":  (float),
+          "boxStats": {
+            "min":    (float),
+            "q1":     (float),
+            "median": (float),
+            "q3":     (float),
+            "max":    (float)
+          }
+        },
+        ...
+      ]
+    """
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    shot_query = (db.session.query(Shot)
+                  .join(Round, Shot.roundID == Round.roundID)
+                  .filter(Round.userID == current_user.userID,
+                          Shot.shot_type == "Putting",
+                          Shot.lie_before == "Green"))
+
+    if course_id:
+        shot_query = shot_query.filter(Round.course_id == course_id)
+    if round_id:
+        shot_query = shot_query.filter(Round.roundID == round_id)
+    if round_type:
+        shot_query = shot_query.filter(Round.round_type == round_type)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            shot_query = shot_query.filter(Round.date_played >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid startDate format"}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            shot_query = shot_query.filter(Round.date_played <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid endDate format"}), 400
+
+    all_putts = shot_query.all()
+
+    # Group shots by (roundID, holeID) to see how many putts per hole
+    from collections import defaultdict
+    shots_by_hole = defaultdict(list)
+    for s in all_putts:
+        shots_by_hole[(s.roundID, s.holeID)].append(s)
+
+    # Sort each hole's shots by shotID
+    for key in shots_by_hole:
+        shots_by_hole[key].sort(key=lambda x: x.shotID)
+
+    # Distance brackets
+    bracket_edges = [
+        (15, 20), (20, 25), (25, 30), (30, 35),
+        (35, 40), (40, 45), (45, 50), (50, 55), (55, 60)
+    ]
+    brackets = []
+    for (low, high) in bracket_edges:
+        bracket_label = f"{low}-{high}"
+        brackets.append({
+            "label": bracket_label,
+            "attempts": 0,
+            "threePutts": 0,
+            "distAfters": []   # store all distance_after values
+        })
+
+    def get_bracket_label(d_ft):
+        for (low, high) in bracket_edges:
+            if low <= d_ft < high:
+                return f"{low}-{high}"
+        return None
+
+    for _, shot_list in shots_by_hole.items():
+        n = len(shot_list)
+        for i, shot in enumerate(shot_list):
+            dist_ft = shot.distance_before
+            bracket_label = get_bracket_label(dist_ft)
+            if bracket_label is None:
+                continue  # not in 15..60 range
+
+            # Count how many putts from this shot forward until the ball is holed
+            putt_count = 1
+            if shot.lie_after != "In the Hole":
+                for j in range(i+1, n):
+                    nxt = shot_list[j]
+                    if nxt.shot_type == "Putting":
+                        putt_count += 1
+                    if nxt.lie_after == "In the Hole":
+                        break
+
+            # Find bracket record and update
+            for b in brackets:
+                if b["label"] == bracket_label:
+                    b["attempts"] += 1
+                    if putt_count >= 3:
+                        b["threePutts"] += 1
+                    # Collect distance_after for the *first* putt in that bracket
+                    b["distAfters"].append(shot.distance_after or 0.0)
+                    break
+
+    # Helper to compute five-number summary
+    def five_number_summary(values):
+        # Return (min, q1, median, q3, max)
+        # We'll do a simple approach. Sort, then pick the quartiles by .25, .5, .75
+        if not values:
+            return (0, 0, 0, 0, 0)
+        sorted_vals = sorted(values)
+        mn = sorted_vals[0]
+        mx = sorted_vals[-1]
+
+        def percentile(sorted_list, p):
+            # p in [0..1], e.g. 0.25 for Q1
+            idx = (len(sorted_list) - 1) * p
+            lower = int(idx)
+            upper = min(lower + 1, len(sorted_list) - 1)
+            frac = idx - lower
+            return sorted_list[lower] + (sorted_list[upper] - sorted_list[lower]) * frac
+
+        q1 = percentile(sorted_vals, 0.25)
+        med = percentile(sorted_vals, 0.50)
+        q3 = percentile(sorted_vals, 0.75)
+        return (mn, q1, med, q3, mx)
+
+    # Build final output
+    output = []
+    for b in brackets:
+        attempts = b["attempts"]
+        if attempts > 0:
+            rate = (b["threePutts"] / attempts) * 100.0
+        else:
+            rate = 0.0
+
+        (mn, q1, med, q3, mx) = five_number_summary(b["distAfters"])
+        stats = {
+            "min":    round(mn, 1),
+            "q1":     round(q1, 1),
+            "median": round(med, 1),
+            "q3":     round(q3, 1),
+            "max":    round(mx, 1),
+        }
+
+        output.append({
+            "bracket": b["label"],
+            "threePuttPercent": round(rate, 1),
+            "boxStats": stats
+        })
+
+    return jsonify(output)
+
+
 
 
 

@@ -135,6 +135,14 @@
         Putting
       </button>
     </li>
+    <!-- Round Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="round-tab" data-bs-toggle="tab"
+        data-bs-target="#roundTabPane" type="button" role="tab"
+        aria-controls="roundTabPane" aria-selected="false">
+        Round Analysis
+      </button>
+    </li>
   </ul>
 
   <!-- TAB CONTENT CONTAINER -->
@@ -425,6 +433,20 @@
 
 
       <div id="puttingSgBarChart"></div>
+
+      <div class="row">
+        <!-- First column: Make Rate 1–15 ft -->
+        <div class="col-md-6">
+          <h5>Make Rate by Distance (1–15 ft)</h5>
+          <div id="putts1to15Chart"></div>
+        </div>
+    
+        <!-- Second column: 3-Putt % chart -->
+        <div class="col-md-6">
+          <h5>3-Putt % and Distribution of Distance After</h5>
+          <div id="threePuttChart"></div>
+        </div>
+      </div>
       <!-- Putting Stats Table -->
       <table class="table table-striped">
         <thead>

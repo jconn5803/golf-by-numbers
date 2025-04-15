@@ -1271,6 +1271,370 @@ async function updateDistanceHistogramResponsive(params) {
   }
 }
 
+
+//────────────────────────────
+// Putting charts
+//────────────────────────────
+async function updatePutts1to15MakeRate(params) {
+  try {
+    // 1) Fetch the data from your endpoint
+    const res = await fetch(`/api/putts_1to15_make_rate?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch putts_1to15_make_rate data");
+    const data = await res.json(); 
+    // data = [
+    //   { distance: 1, makeRate: 50.0, avgStrokesGained: 0.25 },
+    //   { distance: 2, makeRate: 45.0, avgStrokesGained: -0.12 },
+    //   ...
+    // ]
+
+    // 2) Select the container and remove any existing chart
+    const container = d3.select("#putts1to15Chart");
+    container.select("svg").remove();
+
+    // 3) Determine the container's current width (similar to your SG chart)
+    const containerWidth = container.node().clientWidth || 600; 
+
+    // 4) Define margins
+    const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+
+    // 5) Compute chart width & height (inner drawing area)
+    const width = containerWidth - margin.left - margin.right;
+    const baseHeight = 300;  
+    const height = baseHeight - margin.top - margin.bottom;
+
+    // 6) Define total SVG size
+    const svgWidth  = width + margin.left + margin.right;
+    const svgHeight = height + margin.top + margin.bottom;
+
+    // 7) Create an SVG with width="100%" & a matching viewBox
+    const svg = container.append("svg")
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .append("g")
+      .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    // 8) X scale: foot distances 1..15
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.distance))
+      .range([0, width])
+      .padding(0.1);
+
+    // 9) Y scale: Make Rate from 0..100
+    const y = d3.scaleLinear()
+      .domain([0, 100])
+      .range([height, 0])
+      .nice();
+
+    // --------------------------
+    // NEW: Same color logic as "distanceHistogramVertical"
+    // --------------------------
+    const exponentGreen = 0.8;  // For positive SG
+    const exponentRed   = 0.8;  // For negative SG
+
+    function getBarColor(avg_sg) {
+      if (avg_sg < 0) {
+        let t = Math.min(Math.abs(avg_sg) / 1, 1);
+        t = Math.pow(t, exponentRed);
+        return d3.interpolateReds(t);
+      } else {
+        let t = Math.min(avg_sg / 1, 1);
+        t = Math.pow(t, exponentGreen);
+        return d3.interpolateGreens(t);
+      }
+    }
+
+    function getBarBorderColor(avg_sg) {
+      return (avg_sg >= 0) ? d3.interpolateGreens(0.8) : d3.interpolateReds(0.8);
+    }
+    // --------------------------
+
+    // 10) Draw x-axis
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x).tickFormat(d => `${d} ft`));
+
+    // 11) Draw y-axis
+    svg.append("g")
+      .call(d3.axisLeft(y).tickFormat(d => d + "%"));
+
+    // 12) Tooltip
+    const tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "d3-tooltip")
+      .style("position", "absolute")
+      .style("padding", "6px")
+      .style("background", "rgba(0, 0, 0, 0.6)")
+      .style("color", "white")
+      .style("border-radius", "4px")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
+
+    // 13) Draw bars
+    svg.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.distance))
+      .attr("y", d => y(d.makeRate))
+      .attr("width", x.bandwidth())
+      .attr("height", d => height - y(d.makeRate))
+      // Use the same color scheme from the distance histogram vertical:
+      .attr("fill", d => getBarColor(d.avgStrokesGained))
+      .attr("stroke", d => getBarBorderColor(d.avgStrokesGained))
+      .attr("stroke-width", 1)
+      .on("mouseover", function(event, d) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        tooltip.html(`
+          <strong>${d.distance} ft</strong><br/>
+          Make Rate: ${d.makeRate}%<br/>
+          Avg SG: ${d.avgStrokesGained.toFixed(2)}
+        `)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top",  (event.pageY - 28) + "px");
+      })
+      .on("mousemove", function(event) {
+        tooltip
+          .style("left", (event.pageX + 10) + "px")
+          .style("top",  (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.transition().duration(500).style("opacity", 0);
+      });
+
+    // 14) Optional label for y-axis
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -margin.left + 15)
+      .attr("x", -height / 2)
+      .style("text-anchor", "middle")
+      .text("Make Rate (%)");
+
+  } catch (err) {
+    console.error("Error in updatePutts1to15MakeRate:", err);
+  }
+}
+
+
+
+async function updateThreePuttChart(params) {
+  try {
+    const res = await fetch(`/api/three_putt_percent?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch 3-putt data");
+    const data = await res.json(); 
+    // data = [ 
+    //   { 
+    //     bracket, 
+    //     threePuttPercent, 
+    //     boxStats: { min, q1, median, q3, max } 
+    //   }, ...
+    // ]
+
+    // 1) Remove existing SVG
+    const container = d3.select("#threePuttChart");
+    container.select("svg").remove();
+
+    // 2) Determine container width
+    const containerWidth = container.node().clientWidth || 600;
+
+    // 3) Margins
+    const margin = { top: 30, right: 60, bottom: 50, left: 50 };
+    const width = containerWidth - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    // 4) Final SVG size
+    const svgWidth = width + margin.left + margin.right;
+    const svgHeight = height + margin.top + margin.bottom;
+
+    // 5) Create SVG with responsive viewBox
+    const svg = container
+      .append("svg")
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // X scale: bracket labels
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.bracket))  // e.g. ["15-20", "20-25", ...]
+      .range([0, width])
+      .padding(0.1);
+
+    // Y1 scale (Left) for 3-putt %
+    const y1 = d3.scaleLinear()
+      .domain([0, 100])
+      .range([height, 0])
+      .nice();
+
+    // Determine min/max for the distance box-plots
+    const maxDist = d3.max(data, d => d.boxStats.max);
+    const minDist = d3.min(data, d => d.boxStats.min);
+
+    // Y2 scale (Right) for distance
+    const y2 = d3.scaleLinear()
+      .domain([0, maxDist])  // or Math.max(1, maxDist)
+      .range([height, 0])
+      .nice();
+
+    // X axis
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x));
+
+    // Y1 axis
+    svg.append("g")
+      .call(d3.axisLeft(y1).tickFormat(d => d + "%"));
+
+    // Y2 axis
+    svg.append("g")
+      .attr("transform", `translate(${width},0)`)
+      .call(d3.axisRight(y2));
+
+    // Tooltip
+    const tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "d3-tooltip")
+      .style("position", "absolute")
+      .style("padding", "6px")
+      .style("background", "rgba(0,0,0,0.6)")
+      .style("color", "#fff")
+      .style("border-radius", "4px")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
+
+    // 3-Putt bars
+    svg.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.bracket))
+      .attr("y", d => y1(d.threePuttPercent))
+      .attr("width", x.bandwidth())
+      .attr("height", d => height - y1(d.threePuttPercent))
+      .attr("fill", "steelblue")
+      .on("mouseover", function(event, d) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        tooltip.html(`
+          <strong>${d.bracket}</strong><br/>
+          3-Putt: ${d.threePuttPercent}%<br/>
+          min/median/max after: ${d.boxStats.min}/${d.boxStats.median}/${d.boxStats.max} ft
+        `)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mousemove", function(event) {
+        tooltip.style("left", (event.pageX + 10) + "px")
+               .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.transition().duration(500).style("opacity", 0);
+      });
+
+    // Box-and-whiskers for distance
+    const boxWidth = x.bandwidth() * 0.3;
+    const boxGroups = svg.selectAll(".boxGroup")
+      .data(data)
+      .enter()
+      .append("g")
+      .attr("class", "boxGroup")
+      .attr("transform", d => {
+        const bracketX = x(d.bracket) || 0;
+        const offset = (x.bandwidth() - boxWidth) / 2;
+        return `translate(${bracketX + offset},0)`;
+      });
+
+    // Whisker lines
+    boxGroups.append("line") // vertical line from min..max
+      .attr("x1", boxWidth / 2)
+      .attr("x2", boxWidth / 2)
+      .attr("y1", d => y2(d.boxStats.min))
+      .attr("y2", d => y2(d.boxStats.max))
+      .attr("stroke", "black")
+      .attr("stroke-width", 2);
+
+    // min whisker
+    boxGroups.append("line")
+      .attr("x1", boxWidth * 0.2)
+      .attr("x2", boxWidth * 0.8)
+      .attr("y1", d => y2(d.boxStats.min))
+      .attr("y2", d => y2(d.boxStats.min))
+      .attr("stroke", "black")
+      .attr("stroke-width", 2);
+
+    // max whisker
+    boxGroups.append("line")
+      .attr("x1", boxWidth * 0.2)
+      .attr("x2", boxWidth * 0.8)
+      .attr("y1", d => y2(d.boxStats.max))
+      .attr("y2", d => y2(d.boxStats.max))
+      .attr("stroke", "black")
+      .attr("stroke-width", 2);
+
+    // box from q1..q3
+    boxGroups.append("rect")
+      .attr("x", 0)
+      .attr("width", boxWidth)
+      .attr("y", d => y2(d.boxStats.q3))
+      .attr("height", d => Math.max(0, y2(d.boxStats.q1) - y2(d.boxStats.q3)))
+      .attr("fill", "lightgreen")
+      .attr("stroke", "black");
+
+    // median line
+    boxGroups.append("line")
+      .attr("x1", 0)
+      .attr("x2", boxWidth)
+      .attr("y1", d => y2(d.boxStats.median))
+      .attr("y2", d => y2(d.boxStats.median))
+      .attr("stroke", "red")
+      .attr("stroke-width", 2);
+
+    // optional mouseover on the box
+    boxGroups.on("mouseover", function(event, d) {
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip.html(`
+        <strong>${d.bracket}</strong><br/>
+        Q1: ${d.boxStats.q1}<br/>
+        Median: ${d.boxStats.median}<br/>
+        Q3: ${d.boxStats.q3}
+      `)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function() {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
+
+    // Axis labels
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -margin.left + 15)
+      .attr("x", -height / 2)
+      .style("text-anchor", "middle")
+      .style("font-weight", "bold")
+      .text("3-Putt Rate (%)");
+
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", width + margin.right - 5)
+      .style("text-anchor", "middle")
+      .style("font-weight", "bold")
+      .text("Distance After (ft)");
+
+  } catch (err) {
+    console.error("Error in updateThreePuttChart:", err);
+  }
+}
+
+
 //────────────────────────────
 // Main Dashboard Updater
 //────────────────────────────
@@ -1309,6 +1673,12 @@ async function updateDashboard() {
   await updateDistanceHistogramResponsive(params);
 
   await updateNonDrMissDirection(params);
+
+  // 10) Your new 1-to-15 ft Make Rate chart
+  await updatePutts1to15MakeRate(params);
+
+  // 11) Update 3-Putt % Chart
+  await updateThreePuttChart(params);
 
 
 
