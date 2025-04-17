@@ -1,62 +1,231 @@
-{% extends "base.html" %}
+{% extends "base_home.html" %}
 
 {% block title %}
 Home - UnderParData
 {% endblock %}
 
 {% block extra_css %}
-  <!-- If you have page-specific CSS, include it here -->
+  <!-- Page-specific CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 {% endblock %}
 
 {% block content %}
 
-<!-- Hero Section -->
-<div class="hero-section">
-  <!-- Overlay for darkening the background image -->
+<!-- Hero Section (Full-Width with Centered Text Over Background) -->
+<section class="hero-section">
   <div class="hero-overlay"></div>
-  <div class="container hero-content">
+  <div class="container-fluid hero-content d-flex align-items-center justify-content-center">
+      <div class="text-center">
+        <h1 class="hero-title">Golf Smarter, Not Harder!</h1>
+        <p class="hero-subtitle">Use data, not guesswork, to lower your handicap faster and with less effort.</p>
+        <a href="/register" class="btn btn-cta">Get Started Free</a>
+      </div>
+  </div>
+</section>
+
+
+
+
+
+<!-- Benefits Section (Full-Width) -->
+<section class="benefits-section py-5">
+  <div class="container-fluid">
+    <div class="row align-items-center">
+      <!-- Left Column: Mobile Dashboard Image -->
+      <div class="col-lg-6 text-center mb-4 mb-lg-0">
+        <img 
+          src="{{ url_for('static', filename='images/mobile_desktop_example.png') }}" 
+          alt="UnderParData Dashboard on a Mobile Phone" 
+          class="img-fluid"
+        >
+      </div>
+
+      <!-- Right Column: Benefits Text/Bullet Points -->
+      <div class="col-lg-6">
+        <h2 class="section-title">Why Choose GolfOptimise?</h2>
+        <ul class="list-unstyled mt-3">
+          <li class="mb-3">
+            <span class="text-success me-2">&#10004;</span>
+            <strong>Efficiency:</strong> Busy life? No problem. Our data-driven insights pinpoint exactly where you need improvement, meaning even a short practice session leads directly to better scores. You can even generate a PDF report to show your coach. 
+          </li>
+          <li class="mb-3">
+            <span class="text-success me-2">&#10004;</span>
+            <strong>Affordable: </strong> Stat-tracking websites can be expensive for both the elite and amateur golfer. We offer access to stat-tracking for less than the price of a cup of coffee per month.  
+          </li>
+          <li class="mb-3">
+            <span class="text-success me-2">&#10004;</span>
+            <strong>Data-Driven Insights:</strong> We convert inputted shots into strokes gained metrics meaning you can understand where your strengths and weaknesses truly lie without guessing.
+          </li>
+          <li class="mb-3">
+            <span class="text-success me-2">&#10004;</span>
+            <strong>Personalised Dashboard:</strong> A dashboard with powerful Visualisations which allow you to easily spot patterns emerging in your game. You can filter between Practice, Qualifying and Tournament rounds. 
+          </li>
+          <li class="mb-3">
+            <span class="text-success me-2">&#10004;</span>
+            <strong>Track Progess Over Time:</strong> Visualisations have a built in 10 round-rolling average line meaning you can see if your game is truly tracking in the right direction.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- How It Works Section (Responsive Layout for Mobile and Desktop) -->
+<section class="how-it-works-section py-5 bg-light">
+  <div class="container">
+    <h2 class="section-title text-center mb-5">How It Works</h2>
     <div class="row">
-      <div class="col-12 col-md-8">
-        <h1 class="hero-title">Strokes Gained Stats Tracking</h1>
-        <p class="hero-subtitle">Easy to use stat tracking system to identify strenghts and weaknesses in your game.</p>
-        <a href="/register" class="btn btn-cta">Get started now!</a>
+      <!-- Step 1 -->
+      <div class="col-lg-4 mb-4">
+        <div class="step-item">
+          <div class="step-text text-center">
+            <div class="step-number">1</div>
+            <h4>Track Your Rounds</h4>
+            <p>Quickly log rounds in minutes with our easy to use form. Thousands of courses available and you can add any course to our database.</p>
+          </div>
+          <div class="step-image text-center">
+            <img src="{{ url_for('static', filename='images/mobile_example.png') }}" alt="Track Your Rounds" class="img-fluid">
+          </div>
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div class="col-lg-4 mb-4">
+        <div class="step-item">
+          <div class="step-text text-center">
+            <div class="step-number">2</div>
+            <h4>Get Actionable Insights</h4>
+            <p>View your personalised dashboard with strokes gained analytics, breakdowns of each element of your game plus much more.</p>
+          </div>
+          <div class="step-image text-center">
+            <img src="{{ url_for('static', filename='images/mobile_example.png') }}" alt="Get Actionable Insights" class="img-fluid">
+          </div>
+        </div>
+      </div>
+      <!-- Step 3 -->
+      <div class="col-lg-4 mb-4">
+        <div class="step-item">
+          <div class="step-text text-center">
+            <div class="step-number">3</div>
+            <h4>Golf Smarter & Improve</h4>
+            <p>Data doesn't lie! Use your dashboard to see where your strenths and weaknesses lie, so you can practice more efficiently and shoot lower scores!</p>
+          </div>
+          <div class="step-image text-center">
+            <img src="{{ url_for('static', filename='images/mobile_example.png') }}" alt="Golf Smarter & Improve" class="img-fluid">
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- Below the Hero: Example Info Section -->
-<div class="container my-5">
-  <div class="row">
-    <div class="col-lg-6 d-flex align-items-top">
-      <div>
-        <h2 class="mb-3">Track Meaningful Stats</h2>
-        <p>Discover what you can do with our website:</p>
-          <ul>
-            <li><strong>Create an Account:</strong> Sign up and start entering your shot data from every round.</li>
-            <li><strong>Comprehensive Data Storage:</strong> All your rounds are securely stored in our database for easy access and long-term tracking.</li>
-            <li><strong>Custom Filtering Options:</strong> Filter your rounds by date range, round type, or golf course to quickly find the data you need.</li>
-            <li><strong>Strokes Gained Analysis:</strong> View overall strokes gained data to get a clear picture of your performance.</li>
-            <li><strong>Detailed Performance Insights:</strong> Dive deeper with breakdowns for off the tee shots, approach shots, short game, and putting.</li>
+
+<!-- Testimonials Section (Full-Width) -->
+<section class="testimonials-section py-5">
+  <div class="container-fluid">
+    <h2 class="section-title text-center">What Our Users Say</h2>
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="testimonial-box p-4 shadow-sm text-center">
+          <p>"I cut my practice time in half but improved my handicap—this is a game-changer!"</p>
+          <img src="path/to/headshot1.jpg" alt="User Name Headshot" class="img-fluid rounded-circle mx-auto d-block my-2" style="width: 60px; height: 60px; object-fit: cover;">
+          <p class="testimonial-author">— User Name</p>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="testimonial-box p-4 shadow-sm text-center">
+          <p>"Finally, clear and easy analytics that helped me stop guessing and start improving."</p>
+          <img src="path/to/headshot2.jpg" alt="User Name Headshot" class="img-fluid rounded-circle mx-auto d-block my-2" style="width: 60px; height: 60px; object-fit: cover;">
+          <p class="testimonial-author">— User Name</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing Section (Full-Width) -->
+<section class="pricing-section py-5">
+  <div class="container-fluid">
+    <h2 class="section-title text-center">Choose Your Plan</h2>
+    <div class="row justify-content-center">
+      <!-- Free Plan -->
+      <div class="col-md-4 mb-4">
+        <div class="pricing-card p-4 shadow-sm">
+          <!-- Plan Title -->
+          <h3 style="text-align: left;">Basic</h3>
+          <!-- Price -->
+          <div class="price-section" style="margin-top: 10px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">Free</span>
+          </div>
+          <!-- Benefits List with Ticks -->
+          <ul class="list-unstyled" style="margin-top: 20px;">
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Add up to 3 rounds</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Access to the Dashbaord limited to 3 rounds of data</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Community Support</li>
           </ul>
-        <p>
-          <strong>Ready to learn more?</strong> Get started by
-          <a href="/register">creating an account.</a>
-        </p>
-        <a href="/register" class="btn btn-cta me-3 mb-3">Get started now!</a>
-        <a href="/register" class="btn btn-cta me-3 mb-3">Strokes Gained Calculator</a>
+          <!-- Call-to-action -->
+          <div class="text-center" style="margin-top: 20px;">
+            <a href="/register" class="btn btn-cta">Sign Up Free</a>
+          </div>
+        </div>
+      </div>
+      <!-- Monthly Plan -->
+      <div class="col-md-4 mb-4">
+        <div class="pricing-card p-4 shadow-sm">
+          <!-- Plan Title -->
+          <h3 style="text-align: left;">Pro Monthly</h3>
+          <!-- Price -->
+          <div class="price-section" style="margin-top: 10px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">£3.99</span>
+            <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">/month</span>
+          </div>
+          <!-- Benefits List with Ticks -->
+          <ul class="list-unstyled" style="margin-top: 20px;">
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Advanced Analytics</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Unlimited Rounds Tracking</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Email Support</li>
+          </ul>
+          <!-- Call-to-action -->
+          <div class="text-center" style="margin-top: 20px;">
+            <a href="/register" class="btn btn-cta">Get Started</a>
+          </div>
+        </div>
+      </div>
+      <!-- Yearly Plan -->
+      <div class="col-md-4 mb-4">
+        <div class="pricing-card p-4 shadow-sm">
+          <!-- Plan Title -->
+          <h3 style="text-align: left;">Pro Yearly</h3>
+          <!-- Price -->
+          <div class="price-section" style="margin-top: 10px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">£42.99</span>
+            <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">/year</span>
+          </div>
+          <!-- Benefits List with Ticks -->
+          <ul class="list-unstyled" style="margin-top: 20px;">
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>All Monthly Benefits</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Best Value</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Priority Support</li>
+          </ul>
+          <!-- Call-to-action -->
+          <div class="text-center" style="margin-top: 20px;">
+            <a href="/register" class="btn btn-cta">Get Started</a>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="col-lg-6">
-      <img 
-        src="{{ url_for('static', filename='images/dashboard_ss.png') }}" 
-        class="img-fluid rounded shadow" 
-        alt="Dashboard Screenshot" 
-      />
+  </div>
+</section>
+
+
+<!-- Free Strokes Gained Calculator Section (Full-Width) -->
+<section class="calculator-section py-5 bg-light" >
+  <div class="container-fluid">
+    <h2 class="section-title text-center">Free Strokes Gained Calculator</h2>
+    <p class="text-center">Analyze your game with our free tool. Easily track your rounds and receive actionable insights that help you play smarter.</p>
+    <div class="text-center">
+      <a href="/sg_calc" class="btn btn-cta">Try it Now</a>
     </div>
   </div>
-</div>
-</div>
-
+</section>
 {% endblock %}

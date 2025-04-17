@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}
+Pricing - UnderParData
+{% endblock %}
+
+{% block extra_css %}
+  <!-- Page-specific CSS for the Pricing page -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Pricing Section (Full-Width) -->
+<section class="pricing-section py-5">
+  <div class="container-fluid">
+    <h2 class="section-title text-center">Choose Your Plan</h2>
+    <div class="row justify-content-center">
+      <!-- Basic Plan -->
+      <div class="col-md-4 mb-4">
+        <div class="pricing-card p-4 shadow-sm">
+          <!-- Plan Title -->
+          <h3 style="text-align: left;">Basic</h3>
+          <!-- Price -->
+          <div class="price-section" style="margin-top: 10px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">Free</span>
+          </div>
+          <!-- Benefits List with Ticks -->
+          <ul class="list-unstyled" style="margin-top: 20px;">
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Add up to 3 rounds</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Access to the Dashboard limited to 3 rounds of data</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Community Support</li>
+          </ul>
+          <!-- Call-to-action -->
+          <div class="text-center" style="margin-top: 20px;">
+            <a href="/register" class="btn btn-cta">Sign Up Free</a>
+          </div>
+        </div>
+      </div>
+      <!-- Pro Monthly Plan -->
+      <div class="col-md-4 mb-4">
+        <div class="pricing-card p-4 shadow-sm">
+          <!-- Plan Title -->
+          <h3 style="text-align: left;">Pro Monthly</h3>
+          <!-- Price -->
+          <div class="price-section" style="margin-top: 10px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">£3.99</span>
+            <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">/month</span>
+          </div>
+          <!-- Benefits List with Ticks -->
+          <ul class="list-unstyled" style="margin-top: 20px;">
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Advanced Analytics</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Unlimited Rounds Tracking</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Email Support</li>
+          </ul>
+          <!-- Call-to-action -->
+          <div class="text-center" style="margin-top: 20px;">
+            <a href="/register" class="btn btn-cta">Get Started</a>
+          </div>
+        </div>
+      </div>
+      <!-- Pro Yearly Plan -->
+      <div class="col-md-4 mb-4">
+        <div class="pricing-card p-4 shadow-sm">
+          <!-- Plan Title -->
+          <h3 style="text-align: left;">Pro Yearly</h3>
+          <!-- Price -->
+          <div class="price-section" style="margin-top: 10px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">£42.99</span>
+            <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">/year</span>
+          </div>
+          <!-- Benefits List with Ticks -->
+          <ul class="list-unstyled" style="margin-top: 20px;">
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>All Monthly Benefits</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Best Value</li>
+            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Priority Support</li>
+          </ul>
+          <!-- Call-to-action -->
+          <div class="text-center" style="margin-top: 20px;">
+            <a href="/register" class="btn btn-cta">Get Started</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
