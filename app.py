@@ -2300,7 +2300,102 @@ def three_putt_percent():
 
     return jsonify(output)
 
+@app.route('/api/round_analysis', methods=['GET'])
+@login_required
+def round_analysis():
+    """
+    Returns JSON with analysis of a round:
+      - If the query string includes a "round" parameter, that round is used.
+        Otherwise, the most recent round for the user is returned.
+      - The response includes "round_info" (e.g. roundID and date_played),
+        "best_shots" (the top 3 shots by strokes gained, highest first) and 
+        "worst_shots" (the bottom 3 shots by strokes gained).
+      
+      Each shot is serialized to include:
+          - shotID
+          - hole (using shot.holeID)
+          - shot_number (its order number in the round based on shotID)
+          - distance_before, lie_before, distance_after, lie_after
+          - strokes_gained
+    """
+    # Get the round parameter from the query, if provided.
+    round_id = request.args.get('round', type=int)
+    
+    if round_id:
+        # Use the specified round, ensuring it belongs to the current user.
+        selected_round = Round.query.filter_by(roundID=round_id, userID=current_user.userID).first()
+    else:
+        # If no round specified, default to the most recent round.
+        selected_round = (
+            Round.query.filter_by(userID=current_user.userID)
+                 .order_by(Round.date_played.desc())
+                 .first()
+        )
+    
+    if not selected_round:
+        # Return an empty result if no round is found.
+        return jsonify({
+            'round_info': None,
+            'best_shots': [],
+            'worst_shots': []
+        })
 
+    # Retrieve all shots associated with the selected round.
+    shots = selected_round.shots
+    if not shots:
+        return jsonify({
+            'round_info': {'roundID': selected_round.roundID,
+                           'date_played': selected_round.date_played.strftime('%Y-%m-%d')},
+            'best_shots': [],
+            'worst_shots': []
+        })
+
+    # Sort shots by strokes gained.
+    sorted_shots = sorted(shots, key=lambda s: s.strokes_gained)
+    # The worst shots are the three with the lowest strokes gained.
+    worst_shots = sorted_shots[:3]
+    # The best shots are the three with the highest strokes gained.
+    best_shots = sorted_shots[-3:]
+    best_shots.reverse()  # Reverse so the highest strokes gained is first.
+
+    # To provide a shot number (e.g. "Shot 3") we sort all shots
+    # by shotID (assumed to be in chronological order).
+    ordered_shots = sorted(shots, key=lambda s: s.shotID)
+
+    def get_shot_number(shot):
+        """Return the 1-indexed position of this shot within the ordered shots list."""
+        for idx, s in enumerate(ordered_shots, start=1):
+            if s.shotID == shot.shotID:
+                return idx
+        return 0
+
+    def serialize_shot(s):
+        """Serialize a shot for JSON output."""
+        return {
+            'shotID': s.shotID,
+            'hole': s.holeID,  # Alternatively, you might extract a more user-friendly hole name if available.
+            'shot_number': get_shot_number(s),
+            'distance_before': s.distance_before,
+            'lie_before': s.lie_before,
+            'distance_after': s.distance_after,
+            'lie_after': s.lie_after,
+            'strokes_gained': s.strokes_gained
+        }
+
+    best_serialized = [serialize_shot(s) for s in best_shots]
+    worst_serialized = [serialize_shot(s) for s in worst_shots]
+
+    round_info = {
+        'roundID': selected_round.roundID,
+        'date_played': selected_round.date_played.strftime('%Y-%m-%d')
+        # You can add more round-related details if desired.
+    }
+
+    return jsonify({
+        'round_info': round_info,
+        'best_shots': best_serialized,
+        'worst_shots': worst_serialized
+    })
 
 
 

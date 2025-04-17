@@ -1635,6 +1635,74 @@ async function updateThreePuttChart(params) {
 }
 
 
+
+//---------
+// Round analysis
+//------------
+async function updateRoundAnalysis(params) {
+  // Construct the URL parameters. If a round is provided, use it;
+  // otherwise, the endpoint should return the data for the most recent round.
+  const roundParam = document.getElementById("round").value;
+  if (roundParam) {
+    params.set("round", roundParam);
+  }
+  
+  try {
+    // Call your new API endpoint.
+    const res = await fetch(`/api/round_analysis?${params.toString()}`);
+    const data = await res.json();
+    
+    // Expecting data in the format:
+    // {
+    //   round_info: { round_id, date_played, ... },
+    //   best_shots: [ { shotID, hole, shot_number, distance_before, lie_before, distance_after, lie_after, strokes_gained }, ... ],
+    //   worst_shots: [ { shotID, ... same as above }, ... ]
+    // }
+    const container = document.getElementById("roundAnalysisContainer");
+    if (!data.best_shots || !data.worst_shots) {
+      container.innerHTML = "<p>No round analysis data available for this round.</p>";
+      return;
+    }
+    
+    // Build HTML content.
+    let html = "";
+    
+    // Show round info (if provided).
+    if (data.round_info) {
+      html += `<h4>Round Analysis for ${data.round_info.date_played}</h4>`;
+    }
+    
+    // Best Shots Section:
+    html += `<h5>Top 3 Strokes Gained Shots</h5>
+             <ul class="best-shots-list">`;
+    data.best_shots.forEach(shot => {
+      // The tick icon (✔) indicates a positive/strong shot.
+      html += `<li class="shot-item best-shot">
+                 <span class="icon tick">✔</span>
+                 Hole ${shot.hole}, Shot ${shot.shot_number} – from ${shot.distance_before} yds in the ${shot.lie_before} you hit the ball to ${shot.distance_after} yds in the ${shot.lie_after} gaining you ${shot.strokes_gained > 0 ? '+' : ''}${shot.strokes_gained} strokes
+               </li>`;
+    });
+    html += `</ul>`;
+    
+    // Worst Shots Section:
+    html += `<h5>Bottom 3 Strokes Gained Shots</h5>
+             <ul class="worst-shots-list">`;
+    data.worst_shots.forEach(shot => {
+      // The cross icon (✖) indicates a subpar shot.
+      html += `<li class="shot-item worst-shot">
+                 <span class="icon cross">✖</span>
+                 Hole ${shot.hole}, Shot ${shot.shot_number} – from ${shot.distance_before} yds in the ${shot.lie_before} you hit the ball to ${shot.distance_after} yds in the ${shot.lie_after} gaining you ${shot.strokes_gained > 0 ? '+' : ''}${shot.strokes_gained} strokes
+               </li>`;
+    });
+    html += `</ul>`;
+    
+    container.innerHTML = html;
+  } catch (error) {
+    console.error("Error fetching round analysis data:", error);
+  }
+}
+
+
 //────────────────────────────
 // Main Dashboard Updater
 //────────────────────────────
@@ -1679,6 +1747,8 @@ async function updateDashboard() {
 
   // 11) Update 3-Putt % Chart
   await updateThreePuttChart(params);
+
+  await updateRoundAnalysis(params);
 
 
 
