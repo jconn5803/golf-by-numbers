@@ -374,7 +374,43 @@ async function updateStrokesGainedChart(params) {
     .text((d, i) => sgData.labels[i]);
 }
 
+async function updateNonDrMissDirection(params) {
+  try {
+    const res = await fetch(`/api/tee_miss_direction_non_dr?${params.toString()}`);
+    const nonDrData = await res.json();
+    
+    // Calculate percentages for non-driver miss direction visualization.
+    const totalNonDr = nonDrData.total;
+    const leftNonDrPct = totalNonDr > 0 ? (nonDrData.left / totalNonDr * 100).toFixed(1) : 0;
+    const centerNonDrPct = totalNonDr > 0 ? (nonDrData.center / totalNonDr * 100).toFixed(1) : 0;
+    const rightNonDrPct = totalNonDr > 0 ? (nonDrData.right / totalNonDr * 100).toFixed(1) : 0;
+    
+    // Update the HTML elements.
+    const nonDrLeftSection = document.getElementById("nonDrLeftSection");
+    const nonDrCenterSection = document.getElementById("nonDrCenterSection");
+    const nonDrRightSection = document.getElementById("nonDrRightSection");
+    
+    // Set widths.
+    nonDrLeftSection.style.width = `${leftNonDrPct}%`;
+    nonDrCenterSection.style.width = `${centerNonDrPct}%`;
+    nonDrRightSection.style.width = `${rightNonDrPct}%`;
+    
+    // Set left offsets so that elements line up as in the overall fairway visualization.
+    nonDrLeftSection.style.left = "0%";
+    nonDrCenterSection.style.left = `${leftNonDrPct}%`;
+    nonDrRightSection.style.left = `${Number(leftNonDrPct) + Number(centerNonDrPct)}%`;
+    
+    // Update text content.
+    nonDrLeftSection.textContent = nonDrData.left > 0 ? `Left ${leftNonDrPct}%` : "";
+    nonDrCenterSection.textContent = nonDrData.center > 0 ? `Fairway ${centerNonDrPct}%` : "";
+    nonDrRightSection.textContent = nonDrData.right > 0 ? `Right ${rightNonDrPct}%` : "";
+  } catch (err) {
+    console.error("Error updating non-driver miss direction visualization:", err);
+  }
+}
+
 async function updateTeeStats(params, statsData) {
+  // Fetch overall tee stats.
   const teeRes = await fetch(`/api/tee_stats?${params.toString()}`);
   const teeData = await teeRes.json();
 
@@ -386,10 +422,19 @@ async function updateTeeStats(params, statsData) {
     teeSGCard.textContent = teeData.avg_off_tee_sg > 0 
       ? `+${teeData.avg_off_tee_sg}` 
       : teeData.avg_off_tee_sg;
-    teeDistanceCard.textContent = Math.round(teeData.avg_tee_distance) + "yds";
+    teeDistanceCard.textContent = Math.round(teeData.avg_tee_distance) + " yds";
     document.getElementById("teeLieCard").textContent = teeData.cumulativeLiePct + "%";
   }
 
+  // Update Driver Distance Card.
+  const driverDistanceCard = document.getElementById("driverDistanceCard");
+  if (statsData.total_rounds === 0) {
+    driverDistanceCard.textContent = "--";
+  } else {
+    driverDistanceCard.textContent = Math.round(teeData.avg_driver_distance) + " yds";
+  }
+
+  // Update overall Fairway Miss Direction Visualization.
   let leftCount = 0, rightCount = 0, centerCount = 0;
   const directions = teeData.miss_directions;
   const counts = teeData.miss_counts;
@@ -419,6 +464,40 @@ async function updateTeeStats(params, statsData) {
     document.getElementById("rightMissSection").style.left = `${leftPct + centerPct}%`;
     document.getElementById("rightMissSection").textContent = rightCount > 0 ? `Right ${rightPct.toFixed(1)}%` : "";
   }
+
+  // NEW: Update Driver Miss Direction Visualization within updateTeeStats.
+try {
+  const driverRes = await fetch(`/api/tee_miss_direction_dr?${params.toString()}`);
+  const drData = await driverRes.json();
+
+  // Calculate percentages, if any shots exist.
+  const totalDr = drData.total;
+  const leftDrPct = totalDr > 0 ? (drData.left / totalDr * 100).toFixed(1) : 0;
+  const centerDrPct = totalDr > 0 ? (drData.center / totalDr * 100).toFixed(1) : 0;
+  const rightDrPct = totalDr > 0 ? (drData.right / totalDr * 100).toFixed(1) : 0;
+
+  // Update the driver-specific visualization elements.
+  const driverLeftSection = document.getElementById("driverLeftSection");
+  const driverCenterSection = document.getElementById("driverCenterSection");
+  const driverRightSection = document.getElementById("driverRightSection");
+
+  // Set widths as percentages.
+  driverLeftSection.style.width = `${leftDrPct}%`;
+  driverCenterSection.style.width = `${centerDrPct}%`;
+  driverRightSection.style.width = `${rightDrPct}%`;
+
+  // Set left positions so that elements line up correctly:
+  driverLeftSection.style.left = "0%";
+  driverCenterSection.style.left = `${leftDrPct}%`;
+  driverRightSection.style.left = `${Number(leftDrPct) + Number(centerDrPct)}%`;
+
+  // Set text content if there are counts.
+  driverLeftSection.textContent = drData.left > 0 ? `Left ${leftDrPct}%` : "";
+  driverCenterSection.textContent = drData.center > 0 ? `Fairway ${centerDrPct}%` : "";
+  driverRightSection.textContent = drData.right > 0 ? `Right ${rightDrPct}%` : "";
+} catch (err) {
+  console.error("Error updating driver miss direction visualization:", err);
+}
 }
 
 async function updateApproachStats(params, statsData) {
@@ -630,7 +709,7 @@ function createApproachMissChart(missData, approachData) {
   const container = d3.select("#approachMissChart");
   const containerWidth = container.node().clientWidth || 400;
   const widthD3 = containerWidth;
-  const heightD3 = containerWidth; // Use a square chart; adjust as needed.
+  const heightD3 = 400; // Use a square chart; adjust as needed.
   const marginD3 = 20;
   const radius = Math.min(widthD3, heightD3) / 2 - marginD3;
 
@@ -1132,6 +1211,54 @@ async function updateDistanceHistogramVertical(params) {
     .text("Count of Shots");
 }
 
+
+// New function to update the Approach Miss Direction chart based on distance filters.
+async function updateApproachMissChartWithDistance() {
+  // Build URL parameters for the API call.
+  const params = new URLSearchParams();
+
+  const minDistance = document.getElementById("minDistanceApproach").value;
+  const maxDistance = document.getElementById("maxDistanceApproach").value;
+
+  // Only add parameters if values are provided.
+  if (minDistance) {
+    params.set("min_distance", minDistance);
+  }
+  if (maxDistance) {
+    params.set("max_distance", maxDistance);
+  }
+
+  try {
+    // Call your modified /api/approach_stats endpoint with the distance filters.
+    const response = await fetch(`/api/approach_stats?${params.toString()}`);
+    const approachData = await response.json();
+
+    // Calculate percentages for the miss directions.
+    const totalApproachShots = approachData.total_approach_shots;
+    const missData = approachData.miss_directions.map((dir, i) => {
+      const count = approachData.miss_counts[i];
+      const percentage = totalApproachShots > 0 ? ((count / totalApproachShots) * 100).toFixed(1) : 0;
+      return { direction: dir, frequency: count, percentage: percentage };
+    });
+
+    // Clear any existing chart in the container.
+    d3.select("#approachMissChart").selectAll("*").remove();
+
+    // Create the updated pie/miss chart.
+    // (This function remains similar to your existing createApproachMissChart, 
+    //  but now assumes that it will render the chart into "#approachMissChart".)
+    createApproachMissChart(missData, approachData);
+  } catch (err) {
+    console.error("Error updating approach miss chart by distance:", err);
+  }
+}
+
+// Attach event listener to the update button.
+document.getElementById("updateApproachMissBtn").addEventListener("click", function(e) {
+  e.preventDefault(); // Prevent any default form submission behavior.
+  updateApproachMissChartWithDistance();
+});
+
 //────────────────────────────
 // Responsive Histogram Selector
 //────────────────────────────
@@ -1143,6 +1270,438 @@ async function updateDistanceHistogramResponsive(params) {
     await updateDistanceHistogram(params);
   }
 }
+
+
+//────────────────────────────
+// Putting charts
+//────────────────────────────
+async function updatePutts1to15MakeRate(params) {
+  try {
+    // 1) Fetch the data from your endpoint
+    const res = await fetch(`/api/putts_1to15_make_rate?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch putts_1to15_make_rate data");
+    const data = await res.json(); 
+    // data = [
+    //   { distance: 1, makeRate: 50.0, avgStrokesGained: 0.25 },
+    //   { distance: 2, makeRate: 45.0, avgStrokesGained: -0.12 },
+    //   ...
+    // ]
+
+    // 2) Select the container and remove any existing chart
+    const container = d3.select("#putts1to15Chart");
+    container.select("svg").remove();
+
+    // 3) Determine the container's current width (similar to your SG chart)
+    const containerWidth = container.node().clientWidth || 600; 
+
+    // 4) Define margins
+    const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+
+    // 5) Compute chart width & height (inner drawing area)
+    const width = containerWidth - margin.left - margin.right;
+    const baseHeight = 300;  
+    const height = baseHeight - margin.top - margin.bottom;
+
+    // 6) Define total SVG size
+    const svgWidth  = width + margin.left + margin.right;
+    const svgHeight = height + margin.top + margin.bottom;
+
+    // 7) Create an SVG with width="100%" & a matching viewBox
+    const svg = container.append("svg")
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .append("g")
+      .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    // 8) X scale: foot distances 1..15
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.distance))
+      .range([0, width])
+      .padding(0.1);
+
+    // 9) Y scale: Make Rate from 0..100
+    const y = d3.scaleLinear()
+      .domain([0, 100])
+      .range([height, 0])
+      .nice();
+
+    // --------------------------
+    // NEW: Same color logic as "distanceHistogramVertical"
+    // --------------------------
+    const exponentGreen = 0.8;  // For positive SG
+    const exponentRed   = 0.8;  // For negative SG
+
+    function getBarColor(avg_sg) {
+      if (avg_sg < 0) {
+        let t = Math.min(Math.abs(avg_sg) / 1, 1);
+        t = Math.pow(t, exponentRed);
+        return d3.interpolateReds(t);
+      } else {
+        let t = Math.min(avg_sg / 1, 1);
+        t = Math.pow(t, exponentGreen);
+        return d3.interpolateGreens(t);
+      }
+    }
+
+    function getBarBorderColor(avg_sg) {
+      return (avg_sg >= 0) ? d3.interpolateGreens(0.8) : d3.interpolateReds(0.8);
+    }
+    // --------------------------
+
+    // 10) Draw x-axis
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x).tickFormat(d => `${d} ft`));
+
+    // 11) Draw y-axis
+    svg.append("g")
+      .call(d3.axisLeft(y).tickFormat(d => d + "%"));
+
+    // 12) Tooltip
+    const tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "d3-tooltip")
+      .style("position", "absolute")
+      .style("padding", "6px")
+      .style("background", "rgba(0, 0, 0, 0.6)")
+      .style("color", "white")
+      .style("border-radius", "4px")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
+
+    // 13) Draw bars
+    svg.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.distance))
+      .attr("y", d => y(d.makeRate))
+      .attr("width", x.bandwidth())
+      .attr("height", d => height - y(d.makeRate))
+      // Use the same color scheme from the distance histogram vertical:
+      .attr("fill", d => getBarColor(d.avgStrokesGained))
+      .attr("stroke", d => getBarBorderColor(d.avgStrokesGained))
+      .attr("stroke-width", 1)
+      .on("mouseover", function(event, d) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        tooltip.html(`
+          <strong>${d.distance} ft</strong><br/>
+          Make Rate: ${d.makeRate}%<br/>
+          Avg SG: ${d.avgStrokesGained.toFixed(2)}
+        `)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top",  (event.pageY - 28) + "px");
+      })
+      .on("mousemove", function(event) {
+        tooltip
+          .style("left", (event.pageX + 10) + "px")
+          .style("top",  (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.transition().duration(500).style("opacity", 0);
+      });
+
+    // 14) Optional label for y-axis
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -margin.left + 15)
+      .attr("x", -height / 2)
+      .style("text-anchor", "middle")
+      .text("Make Rate (%)");
+
+  } catch (err) {
+    console.error("Error in updatePutts1to15MakeRate:", err);
+  }
+}
+
+
+
+async function updateThreePuttChart(params) {
+  try {
+    const res = await fetch(`/api/three_putt_percent?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch 3-putt data");
+    const data = await res.json(); 
+    // data = [ 
+    //   { 
+    //     bracket, 
+    //     threePuttPercent, 
+    //     boxStats: { min, q1, median, q3, max } 
+    //   }, ...
+    // ]
+
+    // 1) Remove existing SVG
+    const container = d3.select("#threePuttChart");
+    container.select("svg").remove();
+
+    // 2) Determine container width
+    const containerWidth = container.node().clientWidth || 600;
+
+    // 3) Margins
+    const margin = { top: 30, right: 60, bottom: 50, left: 50 };
+    const width = containerWidth - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    // 4) Final SVG size
+    const svgWidth = width + margin.left + margin.right;
+    const svgHeight = height + margin.top + margin.bottom;
+
+    // 5) Create SVG with responsive viewBox
+    const svg = container
+      .append("svg")
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // X scale: bracket labels
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.bracket))  // e.g. ["15-20", "20-25", ...]
+      .range([0, width])
+      .padding(0.1);
+
+    // Y1 scale (Left) for 3-putt %
+    const y1 = d3.scaleLinear()
+      .domain([0, 100])
+      .range([height, 0])
+      .nice();
+
+    // Determine min/max for the distance box-plots
+    const maxDist = d3.max(data, d => d.boxStats.max);
+    const minDist = d3.min(data, d => d.boxStats.min);
+
+    // Y2 scale (Right) for distance
+    const y2 = d3.scaleLinear()
+      .domain([0, maxDist])  // or Math.max(1, maxDist)
+      .range([height, 0])
+      .nice();
+
+    // X axis
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x));
+
+    // Y1 axis
+    svg.append("g")
+      .call(d3.axisLeft(y1).tickFormat(d => d + "%"));
+
+    // Y2 axis
+    svg.append("g")
+      .attr("transform", `translate(${width},0)`)
+      .call(d3.axisRight(y2));
+
+    // Tooltip
+    const tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "d3-tooltip")
+      .style("position", "absolute")
+      .style("padding", "6px")
+      .style("background", "rgba(0,0,0,0.6)")
+      .style("color", "#fff")
+      .style("border-radius", "4px")
+      .style("pointer-events", "none")
+      .style("opacity", 0);
+
+    // 3-Putt bars
+    svg.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x(d.bracket))
+      .attr("y", d => y1(d.threePuttPercent))
+      .attr("width", x.bandwidth())
+      .attr("height", d => height - y1(d.threePuttPercent))
+      .attr("fill", "steelblue")
+      .on("mouseover", function(event, d) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        tooltip.html(`
+          <strong>${d.bracket}</strong><br/>
+          3-Putt: ${d.threePuttPercent}%<br/>
+          min/median/max after: ${d.boxStats.min}/${d.boxStats.median}/${d.boxStats.max} ft
+        `)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mousemove", function(event) {
+        tooltip.style("left", (event.pageX + 10) + "px")
+               .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.transition().duration(500).style("opacity", 0);
+      });
+
+    // Box-and-whiskers for distance
+    const boxWidth = x.bandwidth() * 0.3;
+    const boxGroups = svg.selectAll(".boxGroup")
+      .data(data)
+      .enter()
+      .append("g")
+      .attr("class", "boxGroup")
+      .attr("transform", d => {
+        const bracketX = x(d.bracket) || 0;
+        const offset = (x.bandwidth() - boxWidth) / 2;
+        return `translate(${bracketX + offset},0)`;
+      });
+
+    // Whisker lines
+    boxGroups.append("line") // vertical line from min..max
+      .attr("x1", boxWidth / 2)
+      .attr("x2", boxWidth / 2)
+      .attr("y1", d => y2(d.boxStats.min))
+      .attr("y2", d => y2(d.boxStats.max))
+      .attr("stroke", "black")
+      .attr("stroke-width", 2);
+
+    // min whisker
+    boxGroups.append("line")
+      .attr("x1", boxWidth * 0.2)
+      .attr("x2", boxWidth * 0.8)
+      .attr("y1", d => y2(d.boxStats.min))
+      .attr("y2", d => y2(d.boxStats.min))
+      .attr("stroke", "black")
+      .attr("stroke-width", 2);
+
+    // max whisker
+    boxGroups.append("line")
+      .attr("x1", boxWidth * 0.2)
+      .attr("x2", boxWidth * 0.8)
+      .attr("y1", d => y2(d.boxStats.max))
+      .attr("y2", d => y2(d.boxStats.max))
+      .attr("stroke", "black")
+      .attr("stroke-width", 2);
+
+    // box from q1..q3
+    boxGroups.append("rect")
+      .attr("x", 0)
+      .attr("width", boxWidth)
+      .attr("y", d => y2(d.boxStats.q3))
+      .attr("height", d => Math.max(0, y2(d.boxStats.q1) - y2(d.boxStats.q3)))
+      .attr("fill", "lightgreen")
+      .attr("stroke", "black");
+
+    // median line
+    boxGroups.append("line")
+      .attr("x1", 0)
+      .attr("x2", boxWidth)
+      .attr("y1", d => y2(d.boxStats.median))
+      .attr("y2", d => y2(d.boxStats.median))
+      .attr("stroke", "red")
+      .attr("stroke-width", 2);
+
+    // optional mouseover on the box
+    boxGroups.on("mouseover", function(event, d) {
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip.html(`
+        <strong>${d.bracket}</strong><br/>
+        Q1: ${d.boxStats.q1}<br/>
+        Median: ${d.boxStats.median}<br/>
+        Q3: ${d.boxStats.q3}
+      `)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function() {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
+
+    // Axis labels
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -margin.left + 15)
+      .attr("x", -height / 2)
+      .style("text-anchor", "middle")
+      .style("font-weight", "bold")
+      .text("3-Putt Rate (%)");
+
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", width + margin.right - 5)
+      .style("text-anchor", "middle")
+      .style("font-weight", "bold")
+      .text("Distance After (ft)");
+
+  } catch (err) {
+    console.error("Error in updateThreePuttChart:", err);
+  }
+}
+
+
+
+//---------
+// Round analysis
+//------------
+async function updateRoundAnalysis(params) {
+  // Construct the URL parameters. If a round is provided, use it;
+  // otherwise, the endpoint should return the data for the most recent round.
+  const roundParam = document.getElementById("round").value;
+  if (roundParam) {
+    params.set("round", roundParam);
+  }
+  
+  try {
+    // Call your new API endpoint.
+    const res = await fetch(`/api/round_analysis?${params.toString()}`);
+    const data = await res.json();
+    
+    // Expecting data in the format:
+    // {
+    //   round_info: { round_id, date_played, ... },
+    //   best_shots: [ { shotID, hole, shot_number, distance_before, lie_before, distance_after, lie_after, strokes_gained }, ... ],
+    //   worst_shots: [ { shotID, ... same as above }, ... ]
+    // }
+    const container = document.getElementById("roundAnalysisContainer");
+    if (!data.best_shots || !data.worst_shots) {
+      container.innerHTML = "<p>No round analysis data available for this round.</p>";
+      return;
+    }
+    
+    // Build HTML content.
+    let html = "";
+    
+    // Show round info (if provided).
+    if (data.round_info) {
+      html += `<h4>Round Analysis for ${data.round_info.date_played}</h4>`;
+    }
+    
+    // Best Shots Section:
+    html += `<h5>Top 3 Strokes Gained Shots</h5>
+             <ul class="best-shots-list">`;
+    data.best_shots.forEach(shot => {
+      // The tick icon (✔) indicates a positive/strong shot.
+      html += `<li class="shot-item best-shot">
+                 <span class="icon tick">✔</span>
+                 Hole ${shot.hole}, Shot ${shot.shot_number} – from ${shot.distance_before} yds in the ${shot.lie_before} you hit the ball to ${shot.distance_after} yds in the ${shot.lie_after} gaining you ${shot.strokes_gained > 0 ? '+' : ''}${shot.strokes_gained} strokes
+               </li>`;
+    });
+    html += `</ul>`;
+    
+    // Worst Shots Section:
+    html += `<h5>Bottom 3 Strokes Gained Shots</h5>
+             <ul class="worst-shots-list">`;
+    data.worst_shots.forEach(shot => {
+      // The cross icon (✖) indicates a subpar shot.
+      html += `<li class="shot-item worst-shot">
+                 <span class="icon cross">✖</span>
+                 Hole ${shot.hole}, Shot ${shot.shot_number} – from ${shot.distance_before} yds in the ${shot.lie_before} you hit the ball to ${shot.distance_after} yds in the ${shot.lie_after} gaining you ${shot.strokes_gained > 0 ? '+' : ''}${shot.strokes_gained} strokes
+               </li>`;
+    });
+    html += `</ul>`;
+    
+    container.innerHTML = html;
+  } catch (error) {
+    console.error("Error fetching round analysis data:", error);
+  }
+}
+
 
 //────────────────────────────
 // Main Dashboard Updater
@@ -1180,6 +1739,16 @@ async function updateDashboard() {
   
   // 8) Distance Histogram (Responsive: vertical for small screens, horizontal for larger)
   await updateDistanceHistogramResponsive(params);
+
+  await updateNonDrMissDirection(params);
+
+  // 10) Your new 1-to-15 ft Make Rate chart
+  await updatePutts1to15MakeRate(params);
+
+  // 11) Update 3-Putt % Chart
+  await updateThreePuttChart(params);
+
+  await updateRoundAnalysis(params);
 
 
 

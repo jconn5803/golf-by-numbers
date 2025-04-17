@@ -30,7 +30,7 @@
             <!-- Prefill the first shot's distance -->
             <div 
               class="shot-card mb-3" 
-              id="hole_{{ hole.number }}_shot_1"
+              id="hole_{{ hole.number }}_shot_1" data-par="{{ hole.par }}"
             >
               <h5 class="shot-title">Shot #1</h5>
               <div class="mb-3">
@@ -61,7 +61,7 @@
                   name="hole_{{ hole.number }}_shot_1_lie" 
                   id="hole_{{ hole.number }}_shot_1_lie" 
                   required 
-                  onchange="updateMissDirection({{ hole.number }}, 1, {{ hole.par }})"
+                  onchange="updateMissDirection({{ hole.number }}, 1, {{ hole.par }}); updateClubSelect({{ hole.number }}, 1, {{ hole.par }});"
                 >
                   <option value="Tee" selected>Tee</option>
                   <option value="Fairway">Fairway</option>
@@ -70,6 +70,29 @@
                   <option value="Recovery">Recovery</option>
                   <option value="Green">Green</option>
                 </select>
+              </div>
+
+              <!-- Club dropdown; only shown if lie is "Tee" and par != 3 -->
+              <div class="mb-3" id="hole_{{ hole.number }}_shot_1_club_wrapper" style="display: none;">
+                <label for="hole_{{ hole.number }}_shot_1_club" class="form-label custom-form-label">Club:</label>
+                <select class="form-select custom-form-select" 
+                      name="hole_{{ hole.number }}_shot_1_club" 
+                      id="hole_{{ hole.number }}_shot_1_club">
+                <option value="Dr" selected>Driver</option>
+                <option value="3w">3 Wood</option>
+                <option value="5w">5 Wood</option>
+                <option value="3h">3 Hybrid</option>
+                <option value="4h">4 Hybrid</option>
+                <option value="3i">3 Iron</option>
+                <option value="4i">4 Iron</option>
+                <option value="5i">5 Iron</option>
+                <option value="6i">6 Iron</option>
+                <option value="7i">7 Iron</option>
+                <option value="8i">8 Iron</option>
+                <option value="9i">9 Iron</option>
+                <option value="PW">Pitching Wedge</option>
+                <option value="SW">Sand Wedge</option>
+              </select>
               </div>
 
               <!-- Penalty Checkboxes -->

@@ -143,7 +143,6 @@ def create_checkout_session():
 def stripe_webhook():
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get("Stripe-Signature")
-    print(sig_header)
 
     try:
         event = stripe.Webhook.construct_event(
@@ -462,7 +461,6 @@ def add_round():
     courses = Course.query.all()
     return render_template('add_round.html', courses=courses)
 
-from flask import jsonify
 
 # Add a route to put the shots in
 @app.route('/add_shots/<int:roundID>', methods=['GET', 'POST'])
@@ -474,55 +472,54 @@ def add_shots(roundID):
     holes = Hole.query.filter_by(courseID=course.courseID, teeID=tee_id).order_by(Hole.number).all()
 
     if request.method == 'POST':
-        # Initialise the score for the round
         round_score = 0
-        # 1) Insert Shots + Track Shots per Hole
+
+        # We'll store all new shots here temporarily before adding to DB
+        all_new_shots = []
+
         for hole in holes:
-            # Initialise Hole score - which is tracked as a sum of shots and penalty shots
             num_shots = 1
             hole_penalty_shots = 0
+
+            # We'll keep track of the "real" shots in this hole
+            hole_shots_list = []
+
             while True:
                 distance_str = request.form.get(f"hole_{hole.number}_shot_{num_shots}_distance")
                 lie = request.form.get(f"hole_{hole.number}_shot_{num_shots}_lie")
-                out_of_bounds = request.form.get(f"hole_{hole.number}_shot_{num_shots}_out_of_bounds") == "1"
-                hazard = request.form.get(f"hole_{hole.number}_shot_{num_shots}_hazard") == "1"
-
                 if not distance_str or not lie:
-                    # We break if the fields for shot #num_shots are missing.
+                    # If these fields are missing, we're done with this hole
                     break
 
                 distance = float(distance_str)
+                out_of_bounds = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_out_of_bounds") == "1")
+                hazard = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_hazard") == "1")
+                miss_direction = request.form.get(
+                    f"hole_{hole.number}_shot_{num_shots}_miss_direction", "None"
+                )
+                club = request.form.get(f"hole_{hole.number}_shot_{num_shots}_club", None)
 
-                # Code to specify what happens if OOB selected
+                # Check if short_sided was checked in the form
+                short_sided = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_short_sided") == "1")
+
+                # figure out distance_after/lie_after
+                distance_after = 0.0
+                lie_after = "In the Hole"
+                if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance"):
+                    distance_after = float(request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance"))
+                if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_lie"):
+                    lie_after = request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_lie")
+
+                # Calculate strokes gained
                 if out_of_bounds:
-                    lie_after = "OOB" # Condtion already written into SG function 
-                    distance_after = distance # Still the same distance away
-                    sg = SG_calculator(distance, lie, distance_after, lie_after)
+                    sg = SG_calculator(distance, lie, distance_after, "OOB")
                     hole_penalty_shots += 1
                 else:
-                    distance_after = (
-                        float(request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance", 0))
-                        if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance")
-                        else 0
-                    )
-                    lie_after = request.form.get(
-                        f"hole_{hole.number}_shot_{num_shots + 1}_lie",
-                        "In the Hole"
-                    )
-
-                    # Calculate the strokes gained normally
                     sg = SG_calculator(distance, lie, distance_after, lie_after)
 
                 if hazard:
-                    sg -= 1 # Subtract 1 if end up in a hazard
+                    sg -= 1
                     hole_penalty_shots += 1
-                    lie_after = "Hazard" # Change the lie_after to Hazard after SG calculation so that not captured as an "IN PLAY" shot
-
-                
-                miss_direction = request.form.get(
-                    f"hole_{hole.number}_shot_{num_shots}_miss_direction",
-                    "None"
-                )
 
                 shot_type = shot_type_func(lie=lie, distance=distance, par=hole.par)
 
@@ -536,70 +533,76 @@ def add_shots(roundID):
                     shot_type=shot_type,
                     strokes_gained=sg,
                     miss_direction=miss_direction,
+                    club=club,
+                    short_sided=short_sided  # <-- store the user’s checkbox
                 )
-                db.session.add(new_shot)
 
-                # We increment num_shots here,
-                # so when we finally break, num_shots is 1 higher than the valid shots.
+                # Add to our hole-local list
+                hole_shots_list.append(new_shot)
                 num_shots += 1
 
-            # Because the loop breaks when the next shot's fields are missing,
-            # num_shots is now "one too many".
-            # So the actual hole score = num_shots - 1
-            hole_score = num_shots - 1 + hole_penalty_shots
-            # Add on the hole_score to the round score
-            round_score +=  hole_score
+            # Now that we have the hole’s shots in hole_shots_list, 
+            #  check if any shot has short_sided=1. If so, 
+            #  set the preceding shot's short_sided=1 if that preceding shot is Approach.
+            for i, s in enumerate(hole_shots_list):
+                if s.short_sided:
+                    # If this shot is short_sided, mark the previous shot if it is approach
+                    if i > 0:  # there is a previous shot
+                        prev_shot = hole_shots_list[i - 1]
+                        if prev_shot.shot_type == "Approach":
+                            prev_shot.short_sided = True
 
+            # Now we can add them all to the DB and compute the hole’s score
+            # note: hole_score = (# of real shots) + penaltyShots
+            hole_score = len(hole_shots_list) + hole_penalty_shots
+            round_score += hole_score
 
+            # Add to the master list
+            all_new_shots.extend(hole_shots_list)
+
+            # If hole_score > 0, update the holeStats
             if hole_score > 0:
-                # Find or create HoleStats for this round+hole
-                hole_stat = HoleStats.query.filter_by(
-                    roundID=roundID, 
-                    holeID=hole.holeID
-                ).first()
+                hole_stat = HoleStats.query.filter_by(roundID=roundID, holeID=hole.holeID).first()
                 if not hole_stat:
                     hole_stat = HoleStats(roundID=roundID, holeID=hole.holeID)
                     db.session.add(hole_stat)
-
                 hole_stat.hole_score = hole_score
+
+        # Once all holes are processed, insert the new shots
+        for shot in all_new_shots:
+            db.session.add(shot)
 
         db.session.commit()
 
-        # Update the fw hit/ gir hit
+        # Then do any post-processing updates, e.g. GIR/fairway, aggregated strokes gained, etc.
         update_gir_fairway(roundID, holes)
+        sg_off_tee = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Off the Tee"
+        ).scalar() or 0.0
+        sg_approach = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Approach"
+        ).scalar() or 0.0
+        sg_around_green = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Around the Green"
+        ).scalar() or 0.0
+        sg_putting = db.session.query(func.sum(Shot.strokes_gained)).filter(
+            Shot.roundID == roundID, Shot.shot_type == "Putting"
+        ).scalar() or 0.0
 
-
-        # 2. Once all shots are inserted, compute aggregated SG:
-        sg_off_tee = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Off the Tee").scalar() or 0.0
-
-        sg_approach = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Approach").scalar() or 0.0
-
-        sg_around_green = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Around the Green")\
-            .scalar() or 0.0
-
-        sg_putting = db.session.query(func.sum(Shot.strokes_gained))\
-            .filter(Shot.roundID == roundID, Shot.shot_type == "Putting").scalar() or 0.0
-
-        # 3. Update Round table
         round_data.sg_off_tee = sg_off_tee
         round_data.sg_approach = sg_approach
         round_data.sg_around_green = sg_around_green
         round_data.sg_putting = sg_putting
         round_data.score = round_score
 
-        # Compute the round score to par
-        # Retrieve this tee's par (no need to sum holes)
+        # Compute round score to par
         this_tee = Tee.query.get_or_404(tee_id)
-        # e.g., round_score - total par on this tee
         round_data.score_to_par = round_score - this_tee.course_par
 
         db.session.commit()
-
         return redirect('/dashboard')
 
+    # GET request - just render the template
     return render_template('add_shots.html', round_data=round_data, course=course, tee_id=tee_id, holes=holes)
 
 # Route where the user's rounds are stored
@@ -1004,6 +1007,23 @@ def tee_stats():
     dist_result = dist_query.one()
     avg_tee_distance = float(dist_result.avg_tee_distance or 0)
 
+    # ------------------------------------------------------------
+    # 2B) Average Driver Tee Shot Distance (non-Par 3, club = "Driver")
+    # ------------------------------------------------------------
+    driver_query = db.session.query(
+         func.avg(Shot.distance_before - Shot.distance_after).label('avg_driver_distance')
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .join(Hole, Shot.holeID == Hole.holeID)\
+     .filter(
+         Round.userID == current_user.userID,
+         Shot.shot_type == "Off the Tee",
+         Hole.par != 3,
+         Shot.club == "Dr"
+     )
+    driver_result = driver_query.one()
+    print(driver_result)
+    avg_driver_distance = float(driver_result.avg_driver_distance or 0)
+
     # -------------------------------------------------
     # 3) Miss Direction Distribution (Off the Tee)
     # -------------------------------------------------
@@ -1089,12 +1109,147 @@ def tee_stats():
     data = {
         "avg_off_tee_sg": round(avg_off_tee_sg, 2),
         "avg_tee_distance": round(avg_tee_distance, 2),
+        "avg_driver_distance": round(avg_driver_distance, 2),
         "miss_directions": directions,       # e.g. ["Left", "Right", "None", etc.]
         "miss_counts": direction_counts,     # e.g. [10, 5, 2, ...]
         "total_shots": int(total_shots_dir), # total from the miss direction perspective
         "cumulativeLiePct": cumulative_pct   # single number for card
     }
     return jsonify(data)
+
+@app.route('/api/tee_miss_direction_dr', methods=['GET'])
+@login_required
+def tee_miss_direction_dr():
+    """
+    Returns the miss direction counts for tee shots (shot_type == "Off the Tee")
+    but only for shots with the club value "Dr".
+    """
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    dr_miss_query = db.session.query(
+        Shot.miss_direction,
+        func.count(Shot.shotID).label("count_dir")
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .filter(
+         Round.userID == current_user.userID,
+         Shot.shot_type == "Off the Tee",
+         Shot.club == "Dr"
+     )
+    
+    if course_id:
+        dr_miss_query = dr_miss_query.filter(Round.course_id == course_id)
+    if round_id:
+        dr_miss_query = dr_miss_query.filter(Round.roundID == round_id)
+    if round_type:
+        dr_miss_query = dr_miss_query.filter(Round.round_type == round_type)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        dr_miss_query = dr_miss_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        dr_miss_query = dr_miss_query.filter(Round.date_played <= end_date)
+
+    dr_miss_query = dr_miss_query.group_by(Shot.miss_direction)
+    dr_miss_results = dr_miss_query.all()
+
+    # Calculate breakdown: for simplicity, use the same algorithm as before:
+    leftCount = 0
+    rightCount = 0
+    centerCount = 0
+    totalShots = 0
+
+    for row in dr_miss_results:
+        direction = row.miss_direction.lower() if row.miss_direction else ""
+        count = row.count_dir
+        totalShots += count
+        if "left" in direction:
+            leftCount += count
+        elif "right" in direction:
+            rightCount += count
+        else:
+            centerCount += count
+
+    # Return the counts (and percentages if desired)
+    data = {
+        "left": leftCount,
+        "right": rightCount,
+        "center": centerCount,
+        "total": totalShots
+    }
+    return jsonify(data)
+
+@app.route('/api/tee_miss_direction_non_dr', methods=['GET'])
+@login_required
+def tee_miss_direction_non_dr():
+    """
+    Returns the miss direction counts for tee shots that are:
+     - Off the Tee,
+     - Played on non-par-3 holes (Hole.par != 3),
+     - With a club value NOT equal to "Dr".
+    """
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    non_dr_miss_query = db.session.query(
+        Shot.miss_direction,
+        func.count(Shot.shotID).label("count_dir")
+    ).join(Round, Shot.roundID == Round.roundID)\
+     .join(Hole, Shot.holeID == Hole.holeID)\
+     .filter(
+         Round.userID == current_user.userID,
+         Shot.shot_type == "Off the Tee",
+         Hole.par != 3,
+         Shot.club != "Dr"
+     )
+    
+    if course_id:
+        non_dr_miss_query = non_dr_miss_query.filter(Round.course_id == course_id)
+    if round_id:
+        non_dr_miss_query = non_dr_miss_query.filter(Round.roundID == round_id)
+    if round_type:
+        non_dr_miss_query = non_dr_miss_query.filter(Round.round_type == round_type)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        non_dr_miss_query = non_dr_miss_query.filter(Round.date_played >= start_date)
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        non_dr_miss_query = non_dr_miss_query.filter(Round.date_played <= end_date)
+
+    non_dr_miss_query = non_dr_miss_query.group_by(Shot.miss_direction)
+    non_dr_results = non_dr_miss_query.all()
+
+    # Aggregate the counts.
+    leftCount = 0
+    rightCount = 0
+    centerCount = 0
+    total_count = 0
+
+    for row in non_dr_results:
+        direction = (row.miss_direction or "").lower()
+        count = row.count_dir
+        total_count += count
+        if "left" in direction:
+            leftCount += count
+        elif "right" in direction:
+            rightCount += count
+        else:
+            centerCount += count
+
+    data = {
+        "left": leftCount,
+        "right": rightCount,
+        "center": centerCount,
+        "total": total_count
+    }
+    return jsonify(data)
+
 
 @app.route('/api/approach_stats', methods=['GET'])
 @login_required
@@ -1111,6 +1266,10 @@ def approach_stats():
     round_type = request.args.get('round_type')
     start_date_str = request.args.get('startDate')
     end_date_str = request.args.get('endDate')
+
+    # Add in the option to filter the api request to certain distances
+    min_distance = request.args.get('min_distance', type=float)
+    max_distance = request.args.get('max_distance', type=float)
 
     # ---------------------------
     # 1) Average Approach SG
@@ -1144,6 +1303,13 @@ def approach_stats():
         Shot.lie_after
     ).join(Round, Shot.roundID == Round.roundID)\
       .filter(Round.userID == current_user.userID, Shot.shot_type == "Approach", Shot.lie_before != "Recovery")
+
+    # Apply distance filters if they are provided:
+    if min_distance is not None:
+        shot_query = shot_query.filter(Shot.distance_before >= min_distance)
+    if max_distance is not None:
+        shot_query = shot_query.filter(Shot.distance_before <= max_distance)
+
 
     if course_id:
         shot_query = shot_query.filter(Round.course_id == course_id)
@@ -1445,9 +1611,7 @@ def short_game_stats():
         shots_by_round_hole[key].sort(key=lambda x: x.shotID)
 
     # ----- Debugging Section Start -----
-    print("----- shots_by_round_hole -----")
     for (round_id, hole_id), shots in shots_by_round_hole.items():
-        print(f"Round ID: {round_id}, Hole ID: {hole_id}")
         shot_list = []
         for shot in shots:
             shot_info = {
@@ -1459,8 +1623,7 @@ def short_game_stats():
                 "Shot Type": shot.shot_type  # Added for clarity
             }
             shot_list.append(shot_info)
-        pprint.pprint(shot_list, indent=4)
-    print("----- End of shots_by_round_hole -----")
+    
     # ----- Debugging Section End -----
 
     # --------------- 4) Prepare Structures for Bunker vs. Non-Bunker ---------------
@@ -1509,9 +1672,6 @@ def short_game_stats():
 
     # --------------- 5) Iterate All Shots and Fill Data ---------------
     for (round_hole_key, shot_list) in shots_by_round_hole.items():
-        # Debug: Print the entire shot list with enumeration
-        print(f"Processing Round {round_hole_key[0]}, Hole {round_hole_key[1]}")
-        print(list(enumerate(shot_list)))
 
         for i, shot in enumerate(shot_list):
             # Only process "Around the Green" shots
@@ -1524,11 +1684,6 @@ def short_game_stats():
             # Find the next shot (any shot type)
             next_shot = shot_list[i+1] if (i+1 < len(shot_list)) else None
 
-            # Debug: Print the next_shot details
-            if next_shot:
-                print(f"Current Shot ID: {shot.shotID}, Next Shot ID: {next_shot.shotID}")
-            else:
-                print(f"Current Shot ID: {shot.shotID}, Next Shot: None")
 
             # Bucket by distance_before
             dist_bin = get_distance_bin(shot.distance_before)
@@ -1881,6 +2036,366 @@ def distance_histogram():
     }
     return jsonify(data)
 
+@app.route('/api/putts_1to15_make_rate', methods=['GET'])
+@login_required
+def putts_1to15_make_rate():
+    """
+    Returns an array of length 15, where each entry has:
+      {
+        "distance": i,               # i = 1..15
+        "makeRate": float,           # in percent
+        "avgStrokesGained": float    # average SG for putts at this distance
+      }
+    Only includes shots with lie_before='Green' (i.e. on the green) 
+    and shot_type='Putting', ignoring distances outside 1..15 feet.
+    Respects the same filters as the main dashboard (course, round, etc.).
+    """
+    import math
+
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    # Build query of Shots joined with Round.
+    # We want putting shots on the green, ignoring distance <1 or >15 feet.
+    query = (
+        db.session.query(Shot)
+        .join(Round, Shot.roundID == Round.roundID)
+        .filter(
+            Round.userID == current_user.userID,
+            Shot.lie_before == "Green",    # On green before putt
+            Shot.shot_type == "Putting"    # Marked as putting shots
+        )
+    )
+
+    # Apply filters
+    if course_id:
+        query = query.filter(Round.course_id == course_id)
+    if round_id:
+        query = query.filter(Round.roundID == round_id)
+    if round_type:
+        query = query.filter(Round.round_type == round_type)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            query = query.filter(Round.date_played >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid startDate format. Use YYYY-MM-DD."}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            query = query.filter(Round.date_played <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid endDate format. Use YYYY-MM-DD."}), 400
+
+    # Fetch all relevant shots
+    shots = query.all()
+
+    # Prepare bins for distances 1..15 feet
+    # Each bin: { totalShots, totalMakes, sumSG }
+    bins = []
+    for i in range(1, 16):
+        bins.append({
+            "distance": i,
+            "countShots": 0,
+            "countMakes": 0,
+            "sumSG": 0.0
+        })
+
+    # Populate bins
+    for s in shots:
+        # distance_before is in feet already if lie_before == "Green"
+        dist_foot = int(math.floor(s.distance_before or 0))
+        if dist_foot < 1 or dist_foot > 15:
+            continue  # skip anything outside 1..15
+
+        index = dist_foot - 1  # 0-based index in the bins array
+        bins[index]["countShots"] += 1
+        bins[index]["sumSG"] += (s.strokes_gained or 0.0)
+
+        # If putt ended in hole, that’s a make
+        if s.lie_after == "In the Hole":
+            bins[index]["countMakes"] += 1
+
+    # Compute final makeRate% and avgStrokesGained for each bin
+    output = []
+    for b in bins:
+        cShots = b["countShots"]
+        if cShots > 0:
+            makeRate = (b["countMakes"] / cShots) * 100.0
+            avgSG = b["sumSG"] / cShots
+        else:
+            makeRate = 0.0
+            avgSG = 0.0
+
+        output.append({
+            "distance": b["distance"],
+            "makeRate": round(makeRate, 1),
+            "avgStrokesGained": round(avgSG, 2)
+        })
+
+    return jsonify(output)
+
+
+@app.route('/api/three_putt_percent', methods=['GET'])
+@login_required
+def three_putt_percent():
+    """
+    Returns JSON array of objects like:
+      [
+        {
+          "bracket": "15-20",
+          "threePuttPercent":  (float),
+          "boxStats": {
+            "min":    (float),
+            "q1":     (float),
+            "median": (float),
+            "q3":     (float),
+            "max":    (float)
+          }
+        },
+        ...
+      ]
+    """
+    course_id = request.args.get('course', type=int)
+    round_id = request.args.get('round', type=int)
+    round_type = request.args.get('round_type')
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    shot_query = (db.session.query(Shot)
+                  .join(Round, Shot.roundID == Round.roundID)
+                  .filter(Round.userID == current_user.userID,
+                          Shot.shot_type == "Putting",
+                          Shot.lie_before == "Green"))
+
+    if course_id:
+        shot_query = shot_query.filter(Round.course_id == course_id)
+    if round_id:
+        shot_query = shot_query.filter(Round.roundID == round_id)
+    if round_type:
+        shot_query = shot_query.filter(Round.round_type == round_type)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            shot_query = shot_query.filter(Round.date_played >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid startDate format"}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            shot_query = shot_query.filter(Round.date_played <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid endDate format"}), 400
+
+    all_putts = shot_query.all()
+
+    # Group shots by (roundID, holeID) to see how many putts per hole
+    from collections import defaultdict
+    shots_by_hole = defaultdict(list)
+    for s in all_putts:
+        shots_by_hole[(s.roundID, s.holeID)].append(s)
+
+    # Sort each hole's shots by shotID
+    for key in shots_by_hole:
+        shots_by_hole[key].sort(key=lambda x: x.shotID)
+
+    # Distance brackets
+    bracket_edges = [
+        (15, 20), (20, 25), (25, 30), (30, 35),
+        (35, 40), (40, 45), (45, 50), (50, 55), (55, 60)
+    ]
+    brackets = []
+    for (low, high) in bracket_edges:
+        bracket_label = f"{low}-{high}"
+        brackets.append({
+            "label": bracket_label,
+            "attempts": 0,
+            "threePutts": 0,
+            "distAfters": []   # store all distance_after values
+        })
+
+    def get_bracket_label(d_ft):
+        for (low, high) in bracket_edges:
+            if low <= d_ft < high:
+                return f"{low}-{high}"
+        return None
+
+    for _, shot_list in shots_by_hole.items():
+        n = len(shot_list)
+        for i, shot in enumerate(shot_list):
+            dist_ft = shot.distance_before
+            bracket_label = get_bracket_label(dist_ft)
+            if bracket_label is None:
+                continue  # not in 15..60 range
+
+            # Count how many putts from this shot forward until the ball is holed
+            putt_count = 1
+            if shot.lie_after != "In the Hole":
+                for j in range(i+1, n):
+                    nxt = shot_list[j]
+                    if nxt.shot_type == "Putting":
+                        putt_count += 1
+                    if nxt.lie_after == "In the Hole":
+                        break
+
+            # Find bracket record and update
+            for b in brackets:
+                if b["label"] == bracket_label:
+                    b["attempts"] += 1
+                    if putt_count >= 3:
+                        b["threePutts"] += 1
+                    # Collect distance_after for the *first* putt in that bracket
+                    b["distAfters"].append(shot.distance_after or 0.0)
+                    break
+
+    # Helper to compute five-number summary
+    def five_number_summary(values):
+        # Return (min, q1, median, q3, max)
+        # We'll do a simple approach. Sort, then pick the quartiles by .25, .5, .75
+        if not values:
+            return (0, 0, 0, 0, 0)
+        sorted_vals = sorted(values)
+        mn = sorted_vals[0]
+        mx = sorted_vals[-1]
+
+        def percentile(sorted_list, p):
+            # p in [0..1], e.g. 0.25 for Q1
+            idx = (len(sorted_list) - 1) * p
+            lower = int(idx)
+            upper = min(lower + 1, len(sorted_list) - 1)
+            frac = idx - lower
+            return sorted_list[lower] + (sorted_list[upper] - sorted_list[lower]) * frac
+
+        q1 = percentile(sorted_vals, 0.25)
+        med = percentile(sorted_vals, 0.50)
+        q3 = percentile(sorted_vals, 0.75)
+        return (mn, q1, med, q3, mx)
+
+    # Build final output
+    output = []
+    for b in brackets:
+        attempts = b["attempts"]
+        if attempts > 0:
+            rate = (b["threePutts"] / attempts) * 100.0
+        else:
+            rate = 0.0
+
+        (mn, q1, med, q3, mx) = five_number_summary(b["distAfters"])
+        stats = {
+            "min":    round(mn, 1),
+            "q1":     round(q1, 1),
+            "median": round(med, 1),
+            "q3":     round(q3, 1),
+            "max":    round(mx, 1),
+        }
+
+        output.append({
+            "bracket": b["label"],
+            "threePuttPercent": round(rate, 1),
+            "boxStats": stats
+        })
+
+    return jsonify(output)
+
+@app.route('/api/round_analysis', methods=['GET'])
+@login_required
+def round_analysis():
+    """
+    Returns JSON with analysis of a round:
+      - If the query string includes a "round" parameter, that round is used.
+        Otherwise, the most recent round for the user is returned.
+      - The response includes "round_info" (e.g. roundID and date_played),
+        "best_shots" (the top 3 shots by strokes gained, highest first) and 
+        "worst_shots" (the bottom 3 shots by strokes gained).
+      
+      Each shot is serialized to include:
+          - shotID
+          - hole (using shot.holeID)
+          - shot_number (its order number in the round based on shotID)
+          - distance_before, lie_before, distance_after, lie_after
+          - strokes_gained
+    """
+    # Get the round parameter from the query, if provided.
+    round_id = request.args.get('round', type=int)
+    
+    if round_id:
+        # Use the specified round, ensuring it belongs to the current user.
+        selected_round = Round.query.filter_by(roundID=round_id, userID=current_user.userID).first()
+    else:
+        # If no round specified, default to the most recent round.
+        selected_round = (
+            Round.query.filter_by(userID=current_user.userID)
+                 .order_by(Round.date_played.desc())
+                 .first()
+        )
+    
+    if not selected_round:
+        # Return an empty result if no round is found.
+        return jsonify({
+            'round_info': None,
+            'best_shots': [],
+            'worst_shots': []
+        })
+
+    # Retrieve all shots associated with the selected round.
+    shots = selected_round.shots
+    if not shots:
+        return jsonify({
+            'round_info': {'roundID': selected_round.roundID,
+                           'date_played': selected_round.date_played.strftime('%Y-%m-%d')},
+            'best_shots': [],
+            'worst_shots': []
+        })
+
+    # Sort shots by strokes gained.
+    sorted_shots = sorted(shots, key=lambda s: s.strokes_gained)
+    # The worst shots are the three with the lowest strokes gained.
+    worst_shots = sorted_shots[:3]
+    # The best shots are the three with the highest strokes gained.
+    best_shots = sorted_shots[-3:]
+    best_shots.reverse()  # Reverse so the highest strokes gained is first.
+
+    # To provide a shot number (e.g. "Shot 3") we sort all shots
+    # by shotID (assumed to be in chronological order).
+    ordered_shots = sorted(shots, key=lambda s: s.shotID)
+
+    def get_shot_number(shot):
+        """Return the 1-indexed position of this shot within the ordered shots list."""
+        for idx, s in enumerate(ordered_shots, start=1):
+            if s.shotID == shot.shotID:
+                return idx
+        return 0
+
+    def serialize_shot(s):
+        """Serialize a shot for JSON output."""
+        return {
+            'shotID': s.shotID,
+            'hole': s.holeID,  # Alternatively, you might extract a more user-friendly hole name if available.
+            'shot_number': get_shot_number(s),
+            'distance_before': s.distance_before,
+            'lie_before': s.lie_before,
+            'distance_after': s.distance_after,
+            'lie_after': s.lie_after,
+            'strokes_gained': s.strokes_gained
+        }
+
+    best_serialized = [serialize_shot(s) for s in best_shots]
+    worst_serialized = [serialize_shot(s) for s in worst_shots]
+
+    round_info = {
+        'roundID': selected_round.roundID,
+        'date_played': selected_round.date_played.strftime('%Y-%m-%d')
+        # You can add more round-related details if desired.
+    }
+
+    return jsonify({
+        'round_info': round_info,
+        'best_shots': best_serialized,
+        'worst_shots': worst_serialized
+    })
 
 
 

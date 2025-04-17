@@ -135,6 +135,14 @@
         Putting
       </button>
     </li>
+    <!-- Round Tab -->
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="round-tab" data-bs-toggle="tab"
+        data-bs-target="#roundTabPane" type="button" role="tab"
+        aria-controls="roundTabPane" aria-selected="false">
+        Round Analysis
+      </button>
+    </li>
   </ul>
 
   <!-- TAB CONTENT CONTAINER -->
@@ -235,6 +243,17 @@
             </div>
           </div>
         </div>
+
+        <!-- New Card: Driver Distance -->
+        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card text-center shadow">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Driver Distance</h6>
+              <h3 class="card-title" id="driverDistanceCard">--</h3>
+            </div>
+          </div>
+        </div>
+        
         <!-- Card 3: In Play % -->
         <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
           <div class="card text-center shadow">
@@ -249,14 +268,32 @@
     <div id="offTeeSgBarChart"></div>
 
       <!-- Miss Direction Fairway Visualization -->
-      <h5>Miss Direction Visualization</h5>
+      <h5>Miss Direction - All Tee Shots</h5>
       <div id="fairwayContainer">
         <div id="leftMissSection"></div>
         <div id="centerHitSection"></div>
         <div id="rightMissSection"></div>
       </div>
+    
+
+    <!-- New Driver Miss Direction Visualization -->
+    <h5>Miss Direction - Driver</h5>
+    <div id="driverMissContainer">
+      <div id="driverLeftSection"></div>
+      <div id="driverCenterSection"></div>
+      <div id="driverRightSection"></div>
     </div>
 
+    <!-- New: Non‑Driver Miss Direction Visualization -->
+    <h5>Miss Direction - Non-Driver</h5>
+    <div id="nonDrMissContainer">
+      <div id="nonDrLeftSection"></div>
+      <div id="nonDrCenterSection"></div>
+      <div id="nonDrRightSection"></div>
+    </div>
+
+
+  </div>
     <!-- Approach Tab Pane -->
     <div class="tab-pane fade p-3" id="approachTabPane" role="tabpanel" aria-labelledby="approach-tab">
       <h4>Approach Stats</h4>
@@ -284,13 +321,28 @@
 
       <!-- New Approach SG Bar Chart Visualization -->
       <h5>Approach Strokes Gained Over Last 50 Rounds</h5>
+      
       <div id="approachSgBarChart"></div>
 
 
 
-      <!-- D3.js Approach Miss Directions Visualization -->
+      <!-- Approach Miss Direction Section -->
       <h5>Approach Miss Directions</h5>
-      <div id="approachMissChart" ></div>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <div class="form-group">
+          <label for="minDistanceApproach" class="form-label mb-0">Min Distance (yds):</label>
+          <input type="number" id="minDistanceApproach" class="form-control" placeholder="e.g. 50" style="width: 120px;">
+        </div>
+        <div class="form-group">
+          <label for="maxDistanceApproach" class="form-label mb-0">Max Distance (yds):</label>
+          <input type="number" id="maxDistanceApproach" class="form-control" placeholder="e.g. 125" style="width: 120px;">
+        </div>
+        <button id="updateApproachMissBtn" class="btn btn-cta btn-sm">Update</button>
+      </div>
+
+      <!-- Container for the Approach Miss Direction Chart -->
+      <div id="approachMissChart"></div>
 
       <!-- Approach Shots Table -->
       <h5 class="mt-4">Approach Shots by Distance</h5>
@@ -381,6 +433,20 @@
 
 
       <div id="puttingSgBarChart"></div>
+
+      <div class="row">
+        <!-- First column: Make Rate 1–15 ft -->
+        <div class="col-md-6">
+          <h5>Make Rate by Distance (1–15 ft)</h5>
+          <div id="putts1to15Chart"></div>
+        </div>
+    
+        <!-- Second column: 3-Putt % chart -->
+        <div class="col-md-6">
+          <h5>3-Putt % and Distribution of Distance After</h5>
+          <div id="threePuttChart"></div>
+        </div>
+      </div>
       <!-- Putting Stats Table -->
       <table class="table table-striped">
         <thead>
@@ -396,6 +462,18 @@
         </tbody>
       </table>
     </div>
+
+
+    <!-- Round Analysis Tab Pane -->
+    <div class="tab-pane fade p-3" id="roundTabPane" role="tabpanel" aria-labelledby="round-tab">
+      <h4>Round Analysis</h4>
+      <div id="roundAnalysisContainer">
+        <!-- The round analysis data from the API will be injected here -->
+      </div>
+    </div>
+  
+
+
   </div>
 
 </div> <!-- end .dashboard-wrapper -->
