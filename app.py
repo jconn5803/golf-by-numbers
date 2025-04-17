@@ -33,7 +33,7 @@ from config import DevelopmentConfig, ProductionConfig  # or ProductionConfig fo
 load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(DevelopmentConfig)  # Use ProductionConfig in production
+app.config.from_object(ProductionConfig)  # Use ProductionConfig in production
 
 # Initialize your database and migrations after configuration is set.
 init_app(app)
