@@ -290,6 +290,9 @@ def register():
 # Route for user login 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Add in the situation where a logged in user navigates to the login page
+    if current_user.is_authenticated:
+        return redirect('/')
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
