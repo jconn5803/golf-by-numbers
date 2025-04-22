@@ -16,6 +16,7 @@ from sqlalchemy import func
 # Import login modules
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from forms import RegistrationForm
 
 from datetime import datetime
 from collections import defaultdict
@@ -251,41 +252,26 @@ def pricing():
 # Route for user signup
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        # Retrieve form data
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        # Check if user already exists by username or email
-        user_exists = User.query.filter(
-            (User.username == username) | (User.email == email)
-        ).first()
-        if user_exists:
-            return "User already exists", 400
-
+    if current_user.is_authenticated:
+        return redirect('/')
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        # Double‐check user doesn’t already exist (WTForms validators already ran)
         # Hash the password
-        hashed_password = generate_password_hash(password)
-
-        # Create a new user record
-        new_user = User(
-            first_name=first_name,
-            last_name=last_name,
-            username=username,
-            email=email,
-            password_hash=hashed_password
+        pw_hash = generate_password_hash(form.password.data)
+        # Build and save user
+        user = User(
+            first_name   = form.first_name.data,
+            last_name    = form.last_name.data,
+            username     = form.username.data,
+            email        = form.email.data,
+            password_hash= pw_hash
         )
-
-        # Add to database
-        db.session.add(new_user)
+        db.session.add(user)
         db.session.commit()
-
-        return redirect('/login')
-
-    # If GET request, just show the register template
-    return render_template('register.html')
+        flash('Congratulations, you are now a registered user!')
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
 
 # Route for user login 
 @app.route('/login', methods=['GET', 'POST'])
