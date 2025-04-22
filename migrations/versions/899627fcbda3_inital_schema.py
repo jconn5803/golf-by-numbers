@@ -1,8 +1,8 @@
-"""Inital
+"""Inital schema
 
-Revision ID: bb0dee721284
+Revision ID: 899627fcbda3
 Revises: 
-Create Date: 2025-04-01 21:26:18.183457
+Create Date: 2025-04-21 21:10:02.715214
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'bb0dee721284'
+revision = '899627fcbda3'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -36,6 +36,7 @@ def upgrade():
     sa.Column('subscription_plan', sa.String(length=50), nullable=True),
     sa.PrimaryKeyConstraint('userID'),
     sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('userID'),
     sa.UniqueConstraint('username')
     )
     op.create_table('tees',
@@ -99,6 +100,8 @@ def upgrade():
     sa.Column('shot_type', sa.String(length=50), nullable=False),
     sa.Column('strokes_gained', sa.Float(), nullable=False),
     sa.Column('miss_direction', sa.String(), nullable=True),
+    sa.Column('club', sa.String(length=50), nullable=True),
+    sa.Column('short_sided', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['holeID'], ['holes.holeID'], ),
     sa.ForeignKeyConstraint(['roundID'], ['rounds.roundID'], ),
     sa.PrimaryKeyConstraint('shotID')
