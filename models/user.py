@@ -18,6 +18,10 @@ class User(UserMixin, db.Model):
     subscription_active = db.Column(db.Boolean, default=False)
     subscription_plan = db.Column(db.String(50), nullable=True)
 
+    # Add confirmation for email verification fields
+    confirmed = db.Column(db.Boolean, nullable=False, default=False)
+    confirmed_on = db.Column(db.DateTime, nullable=True)
+
     
 
 
