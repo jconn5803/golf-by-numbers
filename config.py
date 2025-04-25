@@ -21,6 +21,8 @@ class Config:
     MAIL_USE_SLL=True
     MAIL_USE_TLS=True
 
+    SECURITY_PASSWORD_SALT=os.getenv("SECURITY_PASSWORD_SALT")
+
 class DevelopmentConfig(Config):
     DEBUG = True  # Enable debug mode for development
     # Use SQLite for development

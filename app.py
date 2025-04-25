@@ -261,90 +261,139 @@ app.config.update(
   MAIL_USE_SSL  = True,
   MAIL_USERNAME = os.environ["DEL_EMAIL"],
   MAIL_PASSWORD = os.environ["PASSWORD"],
-  MAIL_DEFAULT_SENDER = os.environ["DEL_EMAIL"]
+  MAIL_DEFAULT_SENDER = os.environ["DEL_EMAIL"],
+  SECURITY_PASSWORD_SALT= os.environ["SECURITY_PASSWORD_SALT"]
 )
 
 
 mail = Mail(app)
-s = URLSafeTimedSerializer('secret')
+s = URLSafeTimedSerializer(os.environ["SECURITY_PASSWORD_SALT"])
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect('/')
+        return redirect(url_for('index'))
+
     form = RegistrationForm()
     if form.validate_on_submit():
-        # Double‐check user doesn’t already exist (WTForms validators already ran)
-        # Hash the password
+        # create the user but do NOT email yet
         pw_hash = generate_password_hash(form.password.data)
-        # Build and save user
         user = User(
-            first_name   = form.first_name.data,
-            last_name    = form.last_name.data,
-            username     = form.username.data,
-            email        = form.email.data,
-            password_hash= pw_hash,
+            first_name    = form.first_name.data,
+            last_name     = form.last_name.data,
+            username      = form.username.data,
+            email         = form.email.data,
+            password_hash = pw_hash,
             registered_on = datetime.now(timezone.utc),
-            confirmed=False
+            confirmed     = False
         )
         db.session.add(user)
         db.session.commit()
-        token = s.dumps(form.email.data, salt='email-confirm')
 
-        msg = Message(
-                'Confirm Email',
-                sender=os.environ["DEL_EMAIL"],
-                recipients=[form.email.data],
+        # keep email in session, then redirect
+        session['unconfirmed_email'] = user.email
+        return redirect(url_for('unconfirmed'))
 
-        )
-
-        link = url_for('confirm_email', token=token, _external = True)
-
-        msg.body = "Your link is {}".format(link)
-
-        mail.send(msg)
-        
-        return '<h1> the token is {} <h1>'.format(token)
     return render_template('register.html', title='Register', form=form)
+
+@app.route('/unconfirmed')
+def unconfirmed():
+    email = session.get('unconfirmed_email')
+    if not email:
+        flash('No account to confirm. Please register or log in.', 'info')
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+    if user.confirmed:
+        flash('Your account is already confirmed. Please log in.', 'info')
+        session.pop('unconfirmed_email', None)
+        return redirect(url_for('login'))
+
+    return render_template('unconfirmed.html', email=email)
+
+
+# both “send” and “resend” use the same logic
+@app.route('/send_confirmation', methods=['POST'])
+def send_confirmation():
+    email = session.get('unconfirmed_email')
+    if not email:
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+
+    token = s.dumps(email, salt=app.config["SECURITY_PASSWORD_SALT"])
+    link  = url_for('confirm_email', token=token, _external=True)
+
+    msg = Message('Confirm Your Email', recipients=[email])
+    msg.body = (
+        f"Hi {user.first_name},\n\n"
+        f"Please confirm your address by clicking here:\n{link}\n\n"
+        "If you didn't sign up, just ignore this message."
+    )
+    mail.send(msg)
+
+    flash('Confirmation email sent! Be sure to check your spam folder.', 'success')
+    return redirect(url_for('unconfirmed'))
+
+@app.route('/resend_confirmation', methods=['POST'])
+def resend_confirmation():
+    email = session.get('unconfirmed_email')
+    if not email:
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+    # generate another fresh token
+    token = s.dumps(email, salt=app.config["SECURITY_PASSWORD_SALT"])
+    link  = url_for('confirm_email', token=token, _external=True)
+
+    msg = Message('Confirm Your Email – Reminder', recipients=[email])
+    msg.body = (
+        f"Hi {user.first_name},\n\n"
+        f"Here’s a new confirmation link:\n{link}\n\n"
+        "If you didn't sign up, just ignore this."
+    )
+    mail.send(msg)
+
+    flash('A new confirmation email has been sent.', 'info')
+    return redirect(url_for('unconfirmed'))
 
 @app.route('/confirm_email/<token>')
 def confirm_email(token):
-    
-    # 1. Decode the token, enforcing max age
     try:
-        email = s.loads(token, salt="email-confirm", max_age=80000)
+        email = s.loads(
+            token,
+            salt=app.config["SECURITY_PASSWORD_SALT"],
+            max_age=80000
+        )
     except SignatureExpired:
         flash('Your confirmation link has expired.', 'warning')
-        return redirect(url_for('resend_confirmation'))  # you can build this route
+        return redirect(url_for('unconfirmed'))
     except BadSignature:
         flash('Invalid confirmation token.', 'danger')
         return redirect(url_for('login'))
-    
-    # 2. Look up the user
-    user = User.query.filter_by(email=email).first_or_404()
 
-    # 3. Update if not already confirmed
-    if user.confirmed:
-        flash('Account already confirmed. Please log in.', 'info')
-    else:
-        user.confirmed = True
+    user = User.query.filter_by(email=email).first_or_404()
+    if not user.confirmed:
+        user.confirmed    = True
         user.confirmed_on = datetime.now(timezone.utc)
         db.session.commit()
         flash('Thank you for confirming your email!', 'success')
+    else:
+        flash('Account already confirmed. Please log in.', 'info')
 
-    # 4. Redirect them wherever makes sense
+    session.pop('unconfirmed_email', None)
     return redirect(url_for('login'))
 
     
 
 
-# Route for user login 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Add in the situation where a logged in user navigates to the login page
+    # If already logged in, send to home
     if current_user.is_authenticated:
-        return redirect('/')
+        return redirect(url_for('index'))
+
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -352,11 +401,17 @@ def login():
         # Fetch the user from the database
         user = User.query.filter_by(email=email).first()
         if not user or not check_password_hash(user.password_hash, password):
-            return "Invalid credentials", 401
+            flash('Invalid email or password.', 'error')
+            return render_template('login.html'), 401
+
+        # Check if user has confirmed their account
+        if not user.confirmed:
+            flash('Please confirm your account before logging in.', 'warning')
+            return redirect(url_for('unconfirmed'))
 
         # Log the user in
         login_user(user)
-        return redirect('/dashboard')
+        return redirect(url_for('dashboard'))
 
     return render_template('login.html')
 
