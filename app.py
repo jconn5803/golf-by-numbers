@@ -24,7 +24,7 @@ from collections import defaultdict
 import pprint
 
 # Email Verification Modules
-from itsdangerous import URLSafeTimedSerializer,SignatureExpired
+from itsdangerous import URLSafeTimedSerializer,SignatureExpired, BadSignature  
 from flask_mail import Mail, Message
 
 # Stripe modules
@@ -263,8 +263,12 @@ app.config.update(
   MAIL_PASSWORD = os.environ["PASSWORD"],
   MAIL_DEFAULT_SENDER = os.environ["DEL_EMAIL"]
 )
+
+
 mail = Mail(app)
 s = URLSafeTimedSerializer('secret')
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -306,12 +310,33 @@ def register():
 
 @app.route('/confirm_email/<token>')
 def confirm_email(token):
-
+    
+    # 1. Decode the token, enforcing max age
     try:
         email = s.loads(token, salt="email-confirm", max_age=80000)
-    except:
-        return "The token does not works"
-    return "The token works"
+    except SignatureExpired:
+        flash('Your confirmation link has expired.', 'warning')
+        return redirect(url_for('resend_confirmation'))  # you can build this route
+    except BadSignature:
+        flash('Invalid confirmation token.', 'danger')
+        return redirect(url_for('login'))
+    
+    # 2. Look up the user
+    user = User.query.filter_by(email=email).first_or_404()
+
+    # 3. Update if not already confirmed
+    if user.confirmed:
+        flash('Account already confirmed. Please log in.', 'info')
+    else:
+        user.confirmed = True
+        user.confirmed_on = datetime.now(timezone.utc)
+        db.session.commit()
+        flash('Thank you for confirming your email!', 'success')
+
+    # 4. Redirect them wherever makes sense
+    return redirect(url_for('login'))
+
+    
 
 
 # Route for user login 
