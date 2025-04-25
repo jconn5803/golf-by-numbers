@@ -18,10 +18,14 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm
 
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 import pprint
+
+# Email Verification Modules
+from itsdangerous import URLSafeTimedSerializer,SignatureExpired
+from flask_mail import Mail, Message
 
 # Stripe modules
 import os 
@@ -250,6 +254,17 @@ def pricing():
 
 
 # Route for user signup
+app.config.update(
+  MAIL_SERVER   ="smtp.gmail.com",    # e.g. gmail’s SMTP
+  MAIL_PORT     = 465,                # or 465 for SSL
+  MAIL_USE_TLS  = False,               # starttls
+  MAIL_USE_SSL  = True,
+  MAIL_USERNAME = os.environ["DEL_EMAIL"],
+  MAIL_PASSWORD = os.environ["PASSWORD"],
+  MAIL_DEFAULT_SENDER = os.environ["DEL_EMAIL"]
+)
+mail = Mail(app)
+s = URLSafeTimedSerializer('secret')
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -265,13 +280,39 @@ def register():
             last_name    = form.last_name.data,
             username     = form.username.data,
             email        = form.email.data,
-            password_hash= pw_hash
+            password_hash= pw_hash,
+            registered_on = datetime.now(timezone.utc),
+            confirmed=False
         )
         db.session.add(user)
         db.session.commit()
-        flash('Congratulations, you are now a registered user!')
-        return redirect(url_for('login'))
+        token = s.dumps(form.email.data, salt='email-confirm')
+
+        msg = Message(
+                'Confirm Email',
+                sender=os.environ["DEL_EMAIL"],
+                recipients=[form.email.data],
+
+        )
+
+        link = url_for('confirm_email', token=token, _external = True)
+
+        msg.body = "Your link is {}".format(link)
+
+        mail.send(msg)
+        
+        return '<h1> the token is {} <h1>'.format(token)
     return render_template('register.html', title='Register', form=form)
+
+@app.route('/confirm_email/<token>')
+def confirm_email(token):
+
+    try:
+        email = s.loads(token, salt="email-confirm", max_age=80000)
+    except:
+        return "The token does not works"
+    return "The token works"
+
 
 # Route for user login 
 @app.route('/login', methods=['GET', 'POST'])
