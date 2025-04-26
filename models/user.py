@@ -8,6 +8,7 @@ class User(UserMixin, db.Model):
     userID = db.Column(db.Integer, primary_key=True, unique=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    registered_on = db.Column(db.DateTime, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     first_name = db.Column(db.String(128), nullable = False)
     last_name = db.Column(db.String(128), nullable = False)
@@ -16,6 +17,12 @@ class User(UserMixin, db.Model):
     stripe_customer_id = db.Column(db.String(120), nullable=True)
     subscription_active = db.Column(db.Boolean, default=False)
     subscription_plan = db.Column(db.String(50), nullable=True)
+
+    # Add confirmation for email verification fields
+    confirmed = db.Column(db.Boolean, nullable=False, default=False)
+    confirmed_on = db.Column(db.DateTime, nullable=True)
+
+    
 
 
 

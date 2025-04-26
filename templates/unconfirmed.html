@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Almost there…</h1>
+  <p>
+    An account was created for <strong>{{ email }}</strong>, but we still need you to confirm it.
+  </p>
+
+  <!-- initial send -->
+  <form method="post" action="{{ url_for('send_confirmation') }}">
+    <button type="submit">Send Confirmation Email</button>
+  </form>
+
+  <!-- resend -->
+  <form method="post" action="{{ url_for('resend_confirmation') }}" style="margin-top: 1em;">
+    <button type="submit">Resend Confirmation Email</button>
+  </form>
+
+  <p style="margin-top: 2em;">
+    Already clicked your link? <a href="{{ url_for('login') }}">Log in</a><br>
+    Want to use a different address? <a href="{{ url_for('register') }}">Register again</a>
+  </p>
+{% endblock %}

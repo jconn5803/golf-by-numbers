@@ -14,6 +14,15 @@ class Config:
     STRIPE_ANNUAL_PRICE_ID=os.getenv("STRIPE_ANNUAL_PRICE_ID")
     STRIPE_DAILY_PRICE_ID=os.getenv("STRIPE_DAILY_PRICE_ID")
 
+    MAIL_SERVER='smtp@gmail.com'
+    MAIL_USERNAME = os.getenv("DEL_EMAIL")
+    MAIL_PASSWORD=os.getenv("PASSWORD")
+    MAIL_PORT=465
+    MAIL_USE_SLL=True
+    MAIL_USE_TLS=True
+
+    SECURITY_PASSWORD_SALT=os.getenv("SECURITY_PASSWORD_SALT")
+
 class DevelopmentConfig(Config):
     DEBUG = True  # Enable debug mode for development
     # Use SQLite for development
