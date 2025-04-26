@@ -1,22 +1,51 @@
 {% extends "base.html" %}
+
+{% block title %}Confirm Your Email - Golf By Numbers{% endblock %}
+
+{% block extra_css %}
+  <!-- reuse the login form styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
 {% block content %}
-  <h1>Almost there…</h1>
-  <p>
-    An account was created for <strong>{{ email }}</strong>, but we still need you to confirm it.
-  </p>
+<div class="container mt-5">
+  <div 
+    class="custom-form p-4 mx-auto" 
+    style="max-width: 600px;"
+  >
+    <h1 class="text-center mb-4">Almost there…</h1>
+    <p class="mb-4">
+      An account was created for <strong>{{ email }}</strong>, but we still need you to confirm it.
+    </p>
 
-  <!-- initial send -->
-  <form method="post" action="{{ url_for('send_confirmation') }}">
-    <button type="submit">Send Confirmation Email</button>
-  </form>
+    <!-- initial send -->
+    <form 
+      method="post" 
+      action="{{ url_for('send_confirmation') }}"
+      class="mb-3 text-center"
+    >
+      <button type="submit" class="btn btn-cta px-4">
+        Send Confirmation Email
+      </button>
+    </form>
 
-  <!-- resend -->
-  <form method="post" action="{{ url_for('resend_confirmation') }}" style="margin-top: 1em;">
-    <button type="submit">Resend Confirmation Email</button>
-  </form>
+    <!-- resend -->
+    <form 
+      method="post" 
+      action="{{ url_for('resend_confirmation') }}"
+      class="text-center"
+    >
+      <button type="submit" class="btn btn-cta px-4">
+        Resend Confirmation Email
+      </button>
+    </form>
 
-  <p style="margin-top: 2em;">
-    Already clicked your link? <a href="{{ url_for('login') }}">Log in</a><br>
-    Want to use a different address? <a href="{{ url_for('register') }}">Register again</a>
-  </p>
+    <p class="text-center mt-4">
+      Already clicked your link? 
+      <a href="{{ url_for('login') }}">Log in</a><br>
+      Want to use a different address? 
+      <a href="{{ url_for('register') }}">Register again</a>
+    </p>
+  </div>
+</div>
 {% endblock %}

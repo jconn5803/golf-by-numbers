@@ -3,56 +3,60 @@
 {% block title %}Register - Golf By Numbers{% endblock %}
 
 {% block extra_css %}
-  <!-- If you have page-specific CSS, include it here -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+  <!-- reuse the same styles as login -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 {% endblock %}
 
 {% block content %}
-    <h1>Register</h1>
-    <form action="" method="post">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.first_name.label }}<br>
-            {{ form.first_name(size=32) }}<br>
-            {% for error in form.first_name.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.last_name.label }}<br>
-            {{ form.last_name(size=32) }}<br>
-            {% for error in form.last_name.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.username.label }}<br>
-            {{ form.username(size=32) }}<br>
-            {% for error in form.username.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.email.label }}<br>
-            {{ form.email(size=64) }}<br>
-            {% for error in form.email.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}<br>
-            {% for error in form.password.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.password2.label }}<br>
-            {{ form.password2(size=32) }}<br>
-            {% for error in form.password2.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>{{ form.submit() }}</p>
-    </form>
+<div class="container mt-5">
+  <h1 class="text-center mb-4">Create Account</h1>
+
+  <form 
+    method="POST" 
+    action="{{ url_for('register') }}"
+    class="custom-form p-4 mx-auto"
+    style="max-width: 600px;"
+  >
+    {{ form.hidden_tag() }}
+
+    {# build a list of the core fields in order #}
+    {% set fields = [
+      ('first_name',      'Enter your first name'),
+      ('last_name',       'Enter your last name'),
+      ('username',        'Choose a username'),
+      ('email',           'Enter your email'),
+      ('password',        'Enter your password')
+    ] %}
+
+    {# detect which confirm field you have in your form #}
+    {% if 'confirm_password' in form._fields %}
+      {% set _ = fields.append(('confirm_password', 'Confirm your password')) %}
+    {% elif 'password2' in form._fields %}
+      {% set _ = fields.append(('password2',        'Confirm your password')) %}
+    {% endif %}
+
+    {# render them all with your custom classes and error messages #}
+    {% for name, placeholder in fields %}
+      {% set field = form[name] %}
+      <div class="mb-3">
+        {{ field.label(class_="form-label custom-form-label") }}
+        {{ field(class_="form-control custom-form-input", placeholder=placeholder) }}
+        {% for err in field.errors %}
+          <div class="form-text text-danger">{{ err }}</div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="text-center">
+      <button type="submit" class="btn btn-cta px-4">Sign Up</button>
+    </div>
+  </form>
+
+  <div class="text-center mt-3">
+    <p>
+      Already have an account? 
+      <a href="{{ url_for('login') }}">Log in here</a>
+    </p>
+  </div>
+</div>
 {% endblock %}
