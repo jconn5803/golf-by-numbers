@@ -16,14 +16,16 @@
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css"
   />
-  
+
+  <!-- Font Awesome -->
   <link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
-  crossorigin="anonymous"
-  referrerpolicy="no-referrer"
-/>
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+
   <!-- Your Custom Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
 
@@ -62,15 +64,13 @@
           <li class="nav-item">
             <a class="nav-link fw-semibold px-3" href="/sg_calc">Strokes Gained Calculator</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link fw-semibold px-3" href="/dashboard">My Dashboard</a>
-          </li>
+          <!-- “My Dashboard” removed from here -->
         </ul>
           
         <!-- RIGHT LINKS -->
         <ul class="navbar-nav ms-auto">
           {% if not current_user.is_authenticated %}
-            <!-- Links for Guests (Not Logged In) -->
+            <!-- Guest links -->
             <li class="nav-item">
               <a class="nav-link fw-semibold px-3" href="/login">Log In</a>
             </li>
@@ -78,7 +78,16 @@
               <a class="nav-link fw-semibold px-3 register-link" href="/register">Register</a>
             </li>
           {% else %}
-            <!-- Common link for all logged-in users -->
+            <!-- Authenticated: yellow-boxed Dashboard + Log Out -->
+            <li class="nav-item">
+              <a 
+                class="nav-link fw-semibold px-3 rounded" 
+                href="/dashboard"
+                style="background-color: #ffc107; color: #212529;"
+              >
+                My Dashboard
+              </a>
+            </li>
             <li class="nav-item">
               <a class="nav-link fw-semibold px-3" href="/logout">Log Out</a>
             </li>
@@ -88,9 +97,12 @@
       </div>
     </div>
   </nav>
+
+  <!-- Accent strip below navbar -->
+  <div class="w-100 bg-warning" style="height: 2px;"></div>
   
   <!-- Main Content -->
-  <div class="container-fluid flex-grow-1"></div>
+  <div class="container-fluid flex-grow-1">
     {% block content %}
     <!-- Page-specific content will be injected here -->
     {% endblock %}

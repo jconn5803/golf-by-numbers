@@ -52,9 +52,7 @@
           <li class="nav-item">
             <a class="nav-link fw-semibold px-3" href="/sg_calc">Strokes Gained Calculator</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link fw-semibold px-3" href="/dashboard">My Dashboard</a>
-          </li>
+          <!-- removed static My Dashboard from left -->
         </ul>
           
         <!-- RIGHT LINKS -->
@@ -68,7 +66,17 @@
               <a class="nav-link fw-semibold px-3 register-link" href="/register">Register</a>
             </li>
           {% else %}
-            <!-- Common link for all logged-in users -->
+            <!-- My Dashboard for logged-in users, in a yellow box -->
+            <li class="nav-item">
+              <a 
+                class="nav-link fw-semibold px-3 rounded" 
+                href="/dashboard" 
+                style="background-color: #ffc107; color: #212529;"
+              >
+                My Dashboard
+              </a>
+            </li>
+            <!-- Log Out -->
             <li class="nav-item">
               <a class="nav-link fw-semibold px-3" href="/logout">Log Out</a>
             </li>
@@ -78,12 +86,13 @@
       </div>
     </div>
   </nav>
+
+  <!-- Accent strip below navbar -->
+  <div class="w-100 bg-warning" style="height: 2px;"></div>
   
   <!-- Main Content -->
   <div class="container my-4 flex-grow-1">
-    {% block content %}
-    <!-- Page-specific content will be injected here -->
-    {% endblock %}
+    {% block content %}{% endblock %}
   </div>
 
   <!-- Footer -->
