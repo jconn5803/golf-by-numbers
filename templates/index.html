@@ -200,86 +200,106 @@ Home - GolfOptimise
 <!-- Pricing Section (Full-Width) -->
 <section class="pricing-section py-5">
   <div class="container-fluid">
-    <h2 class="section-title text-center">Choose Your Plan</h2>
-    <div class="row justify-content-center">
-      <!-- Free Plan -->
+    <h2 class="section-title text-center mb-5">Choose Your Plan</h2>
+    <div class="row justify-content-center align-items-stretch">
+      <!-- Basic Plan -->
       <div class="col-md-4 mb-4">
-        <div class="pricing-card p-4 shadow-sm">
-          <!-- Plan Title -->
-          <h3 style="text-align: left;">Basic</h3>
-          <!-- Price -->
-          <div class="price-section" style="margin-top: 10px;">
+        <div class="pricing-card p-4 shadow-sm h-100 d-flex flex-column">
+          <h3 class="mb-3">Basic</h3>
+          <div class="price-section mb-4" style="min-height: 82px;">
             <span class="price" style="font-size: 48px; font-weight: bold;">Free</span>
           </div>
-          <!-- Benefits List with Ticks -->
-          <ul class="list-unstyled" style="margin-top: 20px;">
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Add up to 3 rounds</li>
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Access to the Dashbaord limited to 3 rounds of data</li>
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Community Support</li>
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li><span style="color: green; margin-right: 5px;">✔</span>Add up to 3 rounds</li>
+            <li><span style="color: green; margin-right: 5px;">✔</span>Access to Dashboard (3 rounds)</li>
+            <li><span style="color: green; margin-right: 5px;">✔</span>Free Strokes Gained Calculator</li>
           </ul>
-          <!-- Call-to-action -->
-          <div class="text-center" style="margin-top: 20px;">
-            <a href="/register" class="btn btn-cta">Sign Up Free</a>
+          <div class="mt-auto text-center">
+            <a id="freeBtn" class="btn btn-cta">Sign Up Free</a>
           </div>
         </div>
       </div>
-      <!-- Monthly Plan -->
+
+      <!-- Pro Monthly Plan -->
       <div class="col-md-4 mb-4">
-        <div class="pricing-card p-4 shadow-sm">
-          <!-- Plan Title -->
-          <h3 style="text-align: left;">Pro Monthly</h3>
-          <!-- Price -->
-          <div class="price-section" style="margin-top: 10px;">
-            <span class="price" style="font-size: 48px; font-weight: bold;">£3.99</span>
+        <div class="pricing-card p-4 shadow-sm h-100 d-flex flex-column">
+          <h3 class="mb-3">Pro Monthly</h3>
+          <div class="price-section mb-4" style="min-height: 82px;">
+            <span class="price" style="font-size: 48px; font-weight: bold;">£5.99</span>
             <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">/month</span>
           </div>
-          <!-- Benefits List with Ticks -->
-          <ul class="list-unstyled" style="margin-top: 20px;">
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Advanced Analytics</li>
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Unlimited Rounds Tracking</li>
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Email Support</li>
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li><span style="color: green; margin-right: 5px;">✔</span>Unlimited rounds</li>
+            <li><span style="color: green; margin-right: 5px;">✔</span>Easy Shot Entry Form</li>
+            <li><span style="color: green; margin-right: 5px;">✔</span>Strokes Gained Insights</li>
           </ul>
-          <!-- Call-to-action -->
-          <div class="text-center" style="margin-top: 20px;">
-            <a href="/register" class="btn btn-cta">Get Started</a>
+          <div class="mt-auto text-center">
+            <a id="monthlyBtn" class="btn btn-cta">Get Started</a>
           </div>
         </div>
       </div>
-      <!-- Yearly Plan -->
+
+      <!-- Pro Yearly Plan -->
       <div class="col-md-4 mb-4">
-        <div class="pricing-card p-4 shadow-sm">
-          <!-- Plan Title -->
-          <h3 style="text-align: left;">Pro Yearly</h3>
-          <!-- Price -->
-          <div class="price-section" style="margin-top: 10px;">
-            <span class="price" style="font-size: 48px; font-weight: bold;">£42.99</span>
-            <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">/year</span>
+        <div class="pricing-card p-4 shadow-sm h-100 d-flex flex-column">
+          <h3 class="d-flex justify-content-between align-items-center mb-3">
+            <span>Pro Yearly</span>
+            <span class="badge" style="background-color: #ffc107; color: #000; font-weight: 600; font-size: 0.85rem; padding: 0.25em 0.5em; border-radius: 6px;">
+              Release Sale
+            </span>
+          </h3>
+          <div class="price-section mb-4" style="min-height: 82px;">
+            <div>
+              <span class="price-original" style="text-decoration: line-through; color: #aaa; font-size: 24px;">
+                £42.99
+              </span>
+            </div>
+            <div>
+              <span class="price" style="font-size: 48px; font-weight: bold;">
+                £19.99*
+              </span>
+              <span class="duration" style="font-size: 18px; color: #aaa; margin-left: 5px;">
+                /year
+              </span>
+            </div>
           </div>
-          <!-- Benefits List with Ticks -->
-          <ul class="list-unstyled" style="margin-top: 20px;">
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>All Monthly Benefits</li>
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Best Value</li>
-            <li><span style="color: green; margin-right: 5px;">&#10003;</span>Priority Support</li>
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li><span style="color: green; margin-right: 5px;">✔</span>All Monthly Benefits</li>
+            <li><span style="color: green; margin-right: 5px;">✔</span>Best Value</li>
+            <li><span style="color: green; margin-right: 5px;">✔</span>Limited Time Offer</li>
           </ul>
-          <!-- Call-to-action -->
-          <div class="text-center" style="margin-top: 20px;">
-            <a href="/register" class="btn btn-cta">Get Started</a>
+          <div class="mt-auto text-center">
+            <a id="annualBtn" class="btn btn-cta">Get Started</a>
           </div>
+          <p class="text-muted small mt-3" style="font-size: 0.85rem;">
+            * Only applies to the first year; will be £42.99 thereafter.
+          </p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-
-<!-- Free Strokes Gained Calculator Section (Full-Width) -->
-<section class="calculator-section py-5 bg-light" >
+<!-- Free Strokes Gained Calculator Section -->
+<section class="calculator-section py-5 bg-light">
   <div class="container-fluid">
     <h2 class="section-title text-center">Free Strokes Gained Calculator</h2>
-    <p class="text-center">Analyze your game with our free tool. Easily track your rounds and receive actionable insights that help you play smarter.</p>
+    <p class="text-center">
+      Analyze your game with our free tool. Easily track your rounds and receive actionable insights that help you play smarter.
+    </p>
     <div class="text-center">
       <a href="/sg_calc" class="btn btn-cta">Try it Now</a>
     </div>
   </div>
 </section>
+
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    const isAuthenticated    = {{ 'true' if current_user.is_authenticated else 'false' }};
+    const subscriptionActive = {{ 'true' if current_user.is_authenticated and current_user.subscription_active else 'false' }};
+  </script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
 {% endblock %}

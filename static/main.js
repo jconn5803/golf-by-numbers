@@ -1,38 +1,47 @@
-
-
 // Initialize Stripe with the publishable key retrieved from /config
 fetch("/config")
-  .then((result) => result.json())
-  .then((data) => {
-    const stripe = Stripe(data.publicKey);
+  .then(r => r.json())
+  .then(({ publicKey }) => {
+    const stripe = Stripe(publicKey);
 
-    // Event listener for the monthly subscription button
+    // FREE plan button
+    document.querySelector("#freeBtn").addEventListener("click", () => {
+      if (!isAuthenticated) {
+        window.location.href = "/register";
+      } else {
+        // logged in, whether active or not, free users go straight to dashboard
+        window.location.href = "/dashboard";
+      }
+    });
+
+    // PRO MONTHLY button
     document.querySelector("#monthlyBtn").addEventListener("click", () => {
+      if (!isAuthenticated) {
+        return window.location.href = "/register";
+      }
+      if (subscriptionActive) {
+        return window.location.href = "/dashboard";
+      }
+      // not subscribed yet: kick off Stripe checkout
       fetch("/create-checkout-session?product_type=monthly")
-        .then((result) => result.json())
-        .then((data) => stripe.redirectToCheckout({ sessionId: data.sessionId }))
-        .then((res) => {
-          console.log(res);
-        });
+        .then(r => r.json())
+        .then(data => stripe.redirectToCheckout({ sessionId: data.sessionId }))
+        .catch(console.error);
     });
 
-    // Event listener for the annual subscription button
+    // PRO YEARLY button
     document.querySelector("#annualBtn").addEventListener("click", () => {
+      if (!isAuthenticated) {
+        return window.location.href = "/register";
+      }
+      if (subscriptionActive) {
+        return window.location.href = "/dashboard";
+      }
       fetch("/create-checkout-session?product_type=annual")
-        .then((result) => result.json())
-        .then((data) => stripe.redirectToCheckout({ sessionId: data.sessionId }))
-        .then((res) => {
-          console.log(res);
-        });
+        .then(r => r.json())
+        .then(data => stripe.redirectToCheckout({ sessionId: data.sessionId }))
+        .catch(console.error);
     });
-    // Event listener for the annual subscription button
-    document.querySelector("#dailyBtn").addEventListener("click", () => {
-      fetch("/create-checkout-session?product_type=daily")
-        .then((result) => result.json())
-        .then((data) => stripe.redirectToCheckout({ sessionId: data.sessionId }))
-        .then((res) => {
-          console.log(res);
-        });
-    });
+
+    // (If you ever add a daily plan button, do the same pattern.)
   });
-   
