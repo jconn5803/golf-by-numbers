@@ -1,0 +1,159 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap');
+
+/* Global Font Settings */
+body {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* ----- Hero Section ----- */
+.hero-section {
+  position: relative;
+  width: 100%;
+  background: url("/static/images/dumbarnie.jpg") no-repeat center center;
+  background-size: cover;
+  padding: 150px 0;
+  color: #fff;
+}
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+}
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+.hero-dot {
+  /* the accent color for the dot */
+  color: #ffc107;
+}
+.hero-subtitle {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+}
+
+.custom-size {
+  width: 350px;
+  height: 350px;       /* keep it square for a perfect circle */
+  object-fit: cover;   /* crops/centers if the aspect ratio differs */
+}
+/* ----- CTA Button ----- */
+.btn-cta {
+  background-color: #ffc107;
+  color: #000;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  transition: background-color 0.3s ease;
+}
+.btn-cta:hover {
+  background-color: #e0a800;
+  color: #fff;
+}
+
+/* ----- Section Titles ----- */
+.section-title {
+  font-size: 2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+}
+
+/* ----- Benefits Section ----- */
+.benefits-section .benefit-box {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: transform 0.3s ease;
+}
+.benefits-section .benefit-box:hover {
+  transform: translateY(-5px);
+}
+.benefit-icon {
+  font-size: 2rem;
+}
+
+/* ----- How It Works ----- */
+.step-number {
+  background-color: #ffc107;
+  color: #000;
+  font-size: 2rem;
+  font-weight: bold;
+  width: 50px;
+  height: 50px;
+  line-height: 50px;
+  border-radius: 50%;
+  text-align: center;
+  margin: 0 auto 10px;
+}
+.step-box {
+  text-align: left;
+}
+
+/* ----- Testimonials ----- */
+.testimonials-section .testimonial-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* ----- Pricing Cards ----- */
+.pricing-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.pricing-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.pricing-card .price {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 1rem 0;
+}
+
+/* ----- Final CTA ----- */
+.final-cta-section h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* ----- Responsive Adjustments ----- */
+@media (max-width: 767.98px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+  .section-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* Remove top margin from the main content container for the homepage */
+.container.my-4.flex-grow-1 {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}

@@ -12,7 +12,7 @@ body {
 .hero-section {
   position: relative;
   width: 100%;
-  background: url("/static/images/hero_placeholder.png") no-repeat center center;
+  background: url("/static/images/dumbarnie.jpg") no-repeat center center;
   background-size: cover;
   padding: 150px 0;
   color: #fff;
@@ -39,6 +39,17 @@ body {
   font-size: 1.25rem;
   font-weight: 500;
   margin-bottom: 1.5rem;
+}
+
+.hero-title__exclaim {
+  color: #ffc107;
+}
+
+.testimonial-description {
+  font-size: 0.9rem;
+  color: #6c757d;      /* a subtle gray */
+  margin-top: 0.25rem; /* small space above */
+  font-style: italic;  /* optional, for emphasis */
 }
 
 /* ----- CTA Button ----- */
@@ -147,4 +158,14 @@ body {
 .container.my-4.flex-grow-1 {
   margin-top: 0 !important;
   padding-top: 0 !important;
+}
+
+
+.rating {
+  display: inline-block;
+}
+.rating i {
+  color: #ffc107;    /* Bootstrap’s “warning” yellow */
+  margin: 0 2px;
+  font-size: 1.1rem;
 }
