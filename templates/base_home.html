@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}UnderParData{% endblock %}</title>
+  <title>{% block title %}GolfOptimise{% endblock %}</title>
 
   <!-- Bootstrap CSS -->
   <link
@@ -17,6 +17,13 @@
     href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css"
   />
   
+  <link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+  crossorigin="anonymous"
+  referrerpolicy="no-referrer"
+/>
   <!-- Your Custom Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
 
@@ -47,7 +54,7 @@
         <!-- LEFT LINKS -->
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
-            <a class="nav-link fw-semibold px-3" href="/">About</a>
+            <a class="nav-link fw-semibold px-3" href="/about">About</a>
           </li>
           <li class="nav-item">
             <a class="nav-link fw-semibold px-3" href="/pricing">Pricing</a>
@@ -92,7 +99,7 @@
   <!-- Footer -->
   <footer class="bg-light text-center text-lg-start mt-auto">
     <div class="text-center p-3">
-      &copy; 2025 UnderParData. All rights reserved.
+      &copy; 2025 GolfOptimise. All rights reserved.
     </div>
   </footer>
 

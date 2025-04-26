@@ -16,7 +16,9 @@ Home - GolfOptimise
   <div class="hero-overlay"></div>
   <div class="container-fluid hero-content d-flex align-items-center justify-content-center">
       <div class="text-center">
-        <h1 class="hero-title">Golf Smarter, Not Harder!</h1>
+        <h1 class="hero-title">
+          Golf Smarter, Not Harder<span class="hero-title__exclaim">.</span>
+        </h1>
         <p class="hero-subtitle">Use data, not guesswork, to lower your handicap faster and with less effort.</p>
         <a href="/register" class="btn btn-cta">Get Started Free</a>
       </div>
@@ -125,23 +127,75 @@ Home - GolfOptimise
   <div class="container-fluid">
     <h2 class="section-title text-center">What Our Users Say</h2>
     <div class="row">
+
+      <!-- Testimonial #1 -->
       <div class="col-md-6 mb-4">
         <div class="testimonial-box p-4 shadow-sm text-center">
-          <p>"I cut my practice time in half but improved my handicap—this is a game-changer!"</p>
-          <img src="path/to/headshot1.jpg" alt="User Name Headshot" class="img-fluid rounded-circle mx-auto d-block my-2" style="width: 60px; height: 60px; object-fit: cover;">
-          <p class="testimonial-author">— User Name</p>
+          <p>
+            "I have been using GolfOptimise to get a deeper understanding into my strokes gained data. 
+            This allows me to reflect on my past rounds and plan my practice sessions for future tournaments. 
+            Using GolfOptimise helped me gain a golfing scholarship in America."
+          </p>
+          <img
+            src="{{ url_for('static', filename='images/harrison.jpg') }}"
+            alt="Harrison Sewell Headshot"
+            class="img-fluid rounded-circle mx-auto d-block my-2"
+            style="width: 100px; height: 100px; object-fit: cover;"
+          >
+
+          <!-- 5-star rating -->
+          <div class="rating">
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+          </div>
+
+          <!-- Name & description -->
+          <p class="mt-1 mb-0 fs-5 fw-bold">Harrison Sewell</p>
+          <p class="mb-0 text-muted small">
+            Golfer at Midland College, North of England Boys Winner'
+          </p>
         </div>
       </div>
+
+      <!-- Testimonial #2 (Identical) -->
       <div class="col-md-6 mb-4">
         <div class="testimonial-box p-4 shadow-sm text-center">
-          <p>"Finally, clear and easy analytics that helped me stop guessing and start improving."</p>
-          <img src="path/to/headshot2.jpg" alt="User Name Headshot" class="img-fluid rounded-circle mx-auto d-block my-2" style="width: 60px; height: 60px; object-fit: cover;">
-          <p class="testimonial-author">— User Name</p>
+          <p>
+            "I have been using GolfOptimise to get a deeper understanding into my strokes gained data. 
+            This allows me to reflect on my past rounds and plan my practice sessions for future tournaments. 
+            Using GolfOptimise helped me gain a golfing scholarship in America."
+          </p>
+          <img
+            src="{{ url_for('static', filename='images/harrison.jpg') }}"
+            alt="Harrison Sewell Headshot"
+            class="img-fluid rounded-circle mx-auto d-block my-2"
+            style="width: 100px; height: 100px; object-fit: cover;"
+          >
+
+          <!-- 5-star rating -->
+          <div class="rating">
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+          </div>
+
+          <!-- Name & description -->
+          <p class="mt-1 mb-0 fs-5 fw-bold">Harrison Sewell</p>
+          <p class="mb-0 text-muted small">
+            Golfer at Midland College, 2x Caps for England Boys'
+          </p>
         </div>
       </div>
+
     </div>
   </div>
 </section>
+
 
 <!-- Pricing Section (Full-Width) -->
 <section class="pricing-section py-5">

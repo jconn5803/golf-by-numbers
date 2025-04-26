@@ -1,0 +1,75 @@
+{% extends "base_home.html" %}
+
+{% block title %}
+Home - GolfOptimise
+{% endblock %}
+
+{% block extra_css %}
+  <!-- Page-specific CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section (Full-Width with Centered Text Over Background) -->
+<section class="hero-section">
+  <div class="hero-overlay"></div>
+  <div class="container-fluid hero-content d-flex align-items-center justify-content-center">
+      <div class="text-center">
+        <h1 class="hero-title">
+            The Story<span class="hero-dot">.</span>
+          </h1>
+      </div>
+  </div>
+</section>
+
+
+
+
+
+<!-- Benefits Section (Full-Width) -->
+<section class="benefits-section py-5">
+  <div class="container-fluid">
+    <div class="row align-items-center">
+     
+
+      <!-- Right Column: Benefits Text/Bullet Points -->
+      <div class="col-lg-6">
+        <p>
+          GolfOptimise was motivated by my passion for tracking golf analytics to help improve my own game. The current options on the market to keep track of meaningful insights - particularly stroked gained data 
+          benchmarked against the PGA Tour Average - cost hundreds of pounds per year to subscribe to (a nonnecessity I did not have the money for). I have been using the dashboard since 2023 and used the insights
+          gained from it to win my first Club Championship in June 2024 as well as getting to a County championship Final a month later.</p>
+
+        <p>
+          I was first introduced to the advantage you can gain over competitors by applying a "Moneyball" approach to your own golf game during my golf scholarship at the University of St Andrews. The University
+          kindly paid our subscription to one of the analytics tracking platforms available. This cost hundreds of pounds. </p>
+        <p>
+          When I left university, I could no longer afford to fund this myself so I used my coding 
+          skills to develop a much more simplified version of the dashboard I offer today. In the past few months, I have decided to enhance the user interface and deepen the insights the dashboard offers for all golfing
+          abilities, so that all golfers can improve without having to spend countless hours grinding balls on the driving range. 
+        </p>
+        <p>
+            I have made this available at a very low price which just about covers the hosting costs of the website as I believe you should be able to benefit from turning your shots on the course to meaningful insights 
+            for a low cost. 
+        </p>
+
+
+      </div>
+
+       <!-- Left Column: Mobile Dashboard Image -->
+       <div class="col-lg-6 text-center mb-4 mb-lg-0">
+        <img 
+            src="{{ url_for('static', filename='images/winner.png') }}" 
+            alt="UnderParData Dashboard on a Mobile Phone" 
+            class="img-fluid rounded-circle custom-size"
+            />
+            <!-- Name -->
+            <p class="mt-3 mb-1 fs-5 fw-bold">James Conn</p>
+            <!-- Description -->
+            <p class="mb-0 text-muted small">+2 Handicap, Data Analyst & Full Stack Developer</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
