@@ -70,11 +70,25 @@ def load_user(userID):
 def subscription_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check if the user is logged in and has an active subscription
-        if not current_user.is_authenticated or not current_user.subscription_active:
-            flash("You need an active subscription to access this page.", "warning")
-            return redirect(url_for('recurring_payment_demo'))  # 'subscribe' is the route for subscription info
-        return f(*args, **kwargs)
+        # 1) Make sure they're logged in
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
+
+        # 2) Count how many rounds they've entered
+        rounds_count = Round.query.filter_by(userID=current_user.userID).count()
+
+        # 3) If they have an active subscription, always allow
+        if current_user.subscription_active:
+            return f(*args, **kwargs)
+
+        # 4) If they have fewer than 3 rounds, allow even without subscription
+        if rounds_count < 3:
+            return f(*args, **kwargs)
+
+        # 5) Otherwise (no subscription AND ≥3 rounds), block
+        flash("You need an active subscription to access this page once you’ve logged 3 or more rounds.")
+        return redirect(url_for('pricing'))
+
     return decorated_function
 
 
@@ -445,6 +459,7 @@ def courses():
 # Add a route to add a course
 @app.route('/add_course', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_course():
     if request.method == 'POST':
         course_name = request.form.get('name').strip()
@@ -471,6 +486,7 @@ def add_course():
 # Add a route to populate tees and holes 
 @app.route('/add_tee/<int:course_id>', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_tee(course_id):
     course = Course.query.get_or_404(course_id)
 
@@ -489,6 +505,7 @@ def add_tee(course_id):
 
 @app.route('/add_holes/<int:tee_id>', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_holes(tee_id):
     tee = Tee.query.get_or_404(tee_id)
     if request.method == 'POST':
@@ -539,6 +556,7 @@ from datetime import datetime
 
 @app.route('/add_round', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def add_round():
     if request.method == 'POST':
         # Retrieve form data
