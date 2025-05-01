@@ -57,7 +57,6 @@ stripe_keys = {
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"],
     "price_id": os.environ["STRIPE_MONTHLY_PRICE_ID"],
     "annual_price_id": os.environ["STRIPE_ANNUAL_PRICE_ID"],
-    "daily_price_id": os.environ["STRIPE_DAILY_PRICE_ID"],
 }
 
 stripe.api_key = stripe_keys["secret_key"]
