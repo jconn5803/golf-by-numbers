@@ -38,7 +38,7 @@ from config import DevelopmentConfig, ProductionConfig  # or ProductionConfig fo
 load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(DevelopmentConfig)  # Use ProductionConfig in production
+app.config.from_object(ProductionConfig)  # Use ProductionConfig in production
 
 # Initialize your database and migrations after configuration is set.
 init_app(app)
@@ -61,6 +61,11 @@ stripe_keys = {
 }
 
 stripe.api_key = stripe_keys["secret_key"]
+
+configuration = stripe.billing_portal.Configuration.create(
+  features={"invoice_history": {"enabled": True}},
+)
+
 
 @login_manager.user_loader
 def load_user(userID):
@@ -112,6 +117,26 @@ def recurring_payment_demo_cancelled():
 def get_publishable_key():
     stripe_config = {"publicKey": stripe_keys["publishable_key"]}
     return jsonify(stripe_config)
+
+@app.route("/create-customer-portal-session", methods=["POST"])
+@login_required
+def create_portal_session():
+    # Make sure the user actually has a Stripe customer ID
+    if not current_user.stripe_customer_id:
+        flash("You don’t have an active subscription yet.", "warning")
+        return redirect(url_for("pricing"))
+
+    # Build a return URL back to your account page
+    return_url = url_for("dashboard", _external=True)
+
+    # Create the billing portal session with the real customer ID
+    portal_session = stripe.billing_portal.Session.create(
+        customer=current_user.stripe_customer_id,
+        return_url=return_url,
+    )
+
+    # Redirect the user into the Stripe-hosted portal
+    return redirect(portal_session.url, code=303)
 
 @app.route("/create-checkout-session")
 def create_checkout_session():
