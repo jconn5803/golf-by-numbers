@@ -7,13 +7,7 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "your-default-secret-key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DEBUG = False  # Default to False
-    STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
-    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-    STRIPE_ENDPOINT_SECRET=os.getenv("STRIPE_ENDPOINT_SECRET")
-    STRIPE_MONTHLY_PRICE_ID=os.getenv("STRIPE_MONTHLY_PRICE_ID")
-    STRIPE_ANNUAL_PRICE_ID=os.getenv("STRIPE_ANNUAL_PRICE_ID")
-    STRIPE_DAILY_PRICE_ID=os.getenv("STRIPE_DAILY_PRICE_ID")
-
+    
     MAIL_SERVER='smtp@gmail.com'
     MAIL_USERNAME = os.getenv("DEL_EMAIL")
     MAIL_PASSWORD=os.getenv("PASSWORD")
@@ -27,6 +21,13 @@ class DevelopmentConfig(Config):
     DEBUG = True  # Enable debug mode for development
     # Use SQLite for development
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(basedir, 'instance/app.db')}"
+    STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_ENDPOINT_SECRET=os.getenv("STRIPE_ENDPOINT_SECRET")
+    STRIPE_MONTHLY_PRICE_ID=os.getenv("STRIPE_MONTHLY_PRICE_ID")
+    STRIPE_ANNUAL_PRICE_ID=os.getenv("STRIPE_ANNUAL_PRICE_ID")
+    STRIPE_DAILY_PRICE_ID=os.getenv("STRIPE_DAILY_PRICE_ID")
+
     # Get the test Stripe keys
     
 
@@ -37,6 +38,13 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
     if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+
+    STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_ENDPOINT_SECRET=os.getenv("STRIPE_ENDPOINT_SECRET")
+    STRIPE_MONTHLY_PRICE_ID=os.getenv("STRIPE_MONTHLY_PRICE_ID")
+    STRIPE_ANNUAL_PRICE_ID=os.getenv("STRIPE_ANNUAL_PRICE_ID")
+    
 
 
 
