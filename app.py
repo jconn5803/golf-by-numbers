@@ -38,7 +38,7 @@ from config import DevelopmentConfig, ProductionConfig  # or ProductionConfig fo
 load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(ProductionConfig)  # Use ProductionConfig in production
+app.config.from_object(DevelopmentConfig)  # Use ProductionConfig in production
 
 # Initialize your database and migrations after configuration is set.
 init_app(app)
@@ -480,199 +480,255 @@ def courses():
 
     return render_template('courses.html', courses=courses)
 
-# Add a route to add a course
+# STEP 1: choose or create a course
 @app.route('/add_course', methods=['GET', 'POST'])
 @login_required
 @subscription_required
 def add_course():
+    existing = Course.query.order_by(Course.name).all()
+
     if request.method == 'POST':
-        course_name = request.form.get('name').strip()
-        location = request.form.get('location').strip()
-
-        # 1. Check if a course with the same name & location already exists
-        existing_course = Course.query.filter_by(name=course_name, location=location).first()
-
-        if existing_course:
-            # 2. Flash an error and re-render the form
-            flash('A course with that name and location already exists!', 'danger')
-            return redirect(url_for('add_course'))
+        # if they picked an existing course, request.form['existing_course'] will be its ID
+        existing_id = request.form.get('existing_course', type=int)
+        if existing_id:
+            session.pop('new_course', None)
+            session['course_id'] = existing_id
         else:
-            # 3. Create a new course if it doesn't exist
-            new_course = Course(name=course_name, location=location)
-            db.session.add(new_course)
-            db.session.commit()
+            # otherwise they’re creating a new one
+            name     = request.form.get('name','').strip()
+            location = request.form.get('location','').strip()
+            if not name or not location:
+                flash("Please enter both name and location.", "error")
+                return render_template('add_course.html', courses=existing), 400
 
-            return redirect(url_for('add_tee', course_id=new_course.courseID))
+            session.pop('course_id', None)
+            session['new_course'] = {
+                'name':     name,
+                'location': location
+            }
 
-    # GET request: just render the blank form
-    return render_template('add_course.html')
+        return redirect(url_for('add_tee'))
 
-# Add a route to populate tees and holes 
+    return render_template('add_course.html', courses=existing)
+
+
+# STEP 2: collect tee info (but do not write it yet)
+@app.route('/add_tee', defaults={'course_id': None}, methods=['GET', 'POST'])
 @app.route('/add_tee/<int:course_id>', methods=['GET', 'POST'])
 @login_required
 @subscription_required
 def add_tee(course_id):
-    course = Course.query.get_or_404(course_id)
+    # If we were called with a course_id param, treat that as picking an existing course:
+    if course_id is not None:
+        session.pop('new_course', None)      # clear any “new-course” draft
+        session['course_id'] = course_id    # store the existing course
+
+    course_draft = session.get('new_course')
+    existing_id  = session.get('course_id')
+
+    if not (course_draft or existing_id):
+        flash("Please select or create a course first.", "warning")
+        return redirect(url_for('add_course'))
 
     if request.method == 'POST':
-        name = request.form.get('name')
-        total_distance = request.form.get('total_distance')
-        course_par = request.form.get('course_par')
+        tee_name   = request.form.get('name', '').strip()
+        course_par = request.form.get('course_par', type=int)
 
-        new_tee = Tee(name=name, total_distance = total_distance, course_par = course_par, courseID=course.courseID)
-        db.session.add(new_tee)
-        db.session.commit()
+        if not tee_name or course_par is None:
+            flash("Please enter both a tee name and its par.", "error")
+            # pass down either the draft or the real Course object
+            course = course_draft or Course.query.get_or_404(existing_id)
+            return render_template('add_tee.html', course=course), 400
 
-        return redirect(f'/add_holes/{new_tee.teeID}')
+        # stash tee info, but do NOT commit yet
+        session['new_tee'] = {
+            'name':       tee_name,
+            'course_par': course_par
+        }
+        return redirect(url_for('add_holes'))
+
+    # GET: show form, supplying whatever course we have
+    if course_draft:
+        course = course_draft
+    else:
+        course = Course.query.get_or_404(existing_id)
 
     return render_template('add_tee.html', course=course)
 
-@app.route('/add_holes/<int:tee_id>', methods=['GET', 'POST'])
+
+
+# STEP 3: collect holes, then write course (if new), tee & holes all at once
+@app.route('/add_holes', methods=['GET', 'POST'])
 @login_required
 @subscription_required
-def add_holes(tee_id):
-    tee = Tee.query.get_or_404(tee_id)
+def add_holes():
+    course_draft = session.get('new_course')
+    course_id    = session.get('course_id')
+    tee_draft    = session.get('new_tee')
+
+    if not tee_draft or not (course_draft or course_id):
+        flash("Missing data—please start from the beginning.", "warning")
+        return redirect(url_for('add_course'))
+
     if request.method == 'POST':
-        # 1) Get the total number of holes from the slider
         num_holes = int(request.form.get('num_holes', 18))
+        distances = request.form.getlist('distances')
+        pars      = [int(request.form.get(f'par_{i+1}', 4)) for i in range(num_holes)]
 
-        # 2) Get the list of distances. 
-        #    This works because your <input> for hole distance has name="distances"
-        distances_data = request.form.getlist('distances')
+        if len(distances) < num_holes:
+            flash("Please enter a distance for every hole.", "error")
+            return render_template('add_holes.html', tee_name=tee_draft['name']), 400
 
-        # Remove any references to request.form.getlist('pars') or request.form.getlist('holes')
+        # 1) If new course, insert it
+        if course_draft:
+            new_course = Course(
+                name     = course_draft['name'],
+                location = course_draft['location']
+            )
+            db.session.add(new_course)
+            db.session.flush()
+            target_course_id = new_course.courseID
+        else:
+            target_course_id = course_id
 
-        # 3) For each hole index, retrieve distance from distances_data
-        #    and the par from request.form.get(f"par_{i+1}")
+        # 2) Insert the new tee
+        total_dist = sum(int(distances[i] or 0) for i in range(num_holes))
+        new_tee = Tee(
+            name           = tee_draft['name'],
+            total_distance = total_dist,
+            course_par     = tee_draft['course_par'],
+            courseID       = target_course_id
+        )
+        db.session.add(new_tee)
+        db.session.flush()
+        target_tee_id = new_tee.teeID
+
+        # 3) Insert all holes
         for i in range(num_holes):
-            distance_str = distances_data[i]  # e.g. "385"
-            distance = int(distance_str) if distance_str else 0
-
-            # Get the par using the hole-specific name "par_1", "par_2", etc.
-            par_value = request.form.get(f"par_{i+1}", "4")  # default to "4" if not found
-            par = int(par_value)
-
-            # Create the Hole object
             hole = Hole(
-                courseID = tee.courseID,
-                teeID    = tee.teeID,
-                number   = i + 1,
-                par      = par,
-                distance = distance
+                courseID = target_course_id,
+                teeID    = target_tee_id,
+                number   = i+1,
+                par      = pars[i],
+                distance = int(distances[i] or 0)
             )
             db.session.add(hole)
 
-        # 4) Commit the newly added holes
+        # 4) Commit everything together
         db.session.commit()
 
-        # 5) Recalculate the tee’s total_distance
-        tee.total_distance = sum(h.distance or 0 for h in tee.holes)
-        db.session.commit()
+        # 5) Clean up session
+        session.pop('new_course', None)
+        session.pop('course_id',   None)
+        session.pop('new_tee',     None)
 
-        # 6) Redirect to wherever you’d like after saving
-        return redirect('/add_round')
+        return redirect(url_for('add_round'))
 
-    # If GET, just render the add_holes form
-    return render_template('add_holes.html', tee=tee)
+    # GET
+    return render_template('add_holes.html', tee_name=tee_draft['name'])
 
-# Add a route to add a round in
-from datetime import datetime
 
 @app.route('/add_round', methods=['GET', 'POST'])
 @login_required
 @subscription_required
 def add_round():
     if request.method == 'POST':
-        # Retrieve form data
-        course_id = request.form.get('course')
-        tee_id = request.form.get('tee')
-        date_played_str = request.form.get('date_played')
-        round_type = request.form.get('round_type')
+        # Retrieve and validate form data
+        course_id   = request.form.get('course')
+        tee_id      = request.form.get('tee')
+        date_played = request.form.get('date_played')
+        round_type  = request.form.get('round_type')
 
-        # Validate form data
-        if not course_id or not tee_id or not date_played_str or not round_type:
-            return "All fields are required.", 400
+        if not all([course_id, tee_id, date_played, round_type]):
+            flash("Please fill in every field.", "error")
+            return render_template('add_round.html', courses=Course.query.all()), 400
 
-        # Convert the date string to a Python date object
-        try:
-            date_played = datetime.strptime(date_played_str, "%Y-%m-%d").date()
-        except ValueError:
-            return "Invalid date format. Please use YYYY-MM-DD.", 400
+        # Stash the draft round in the session (no DB write yet)
+        session['new_round'] = {
+            'course_id':   int(course_id),
+            'tee_id':      int(tee_id),
+            'date_played': date_played,
+            'round_type':  round_type
+        }
+        return redirect(url_for('add_shots'))
 
-        # Create a new Round object
-        new_round = Round(
-            userID=current_user.userID,
-            course_id=course_id,
-            tee_id = tee_id,
-            round_type = round_type,
-            date_played=date_played
-        )
-        db.session.add(new_round)
-        db.session.commit()
-
-        # Redirect to the next page for shot entry
-        return redirect(url_for('add_shots', roundID=new_round.roundID))
-
-    # Retrieve course data for the form
+    # GET: show the initial round form
     courses = Course.query.all()
     return render_template('add_round.html', courses=courses)
 
 
-# Add a route to put the shots in
-@app.route('/add_shots/<int:roundID>', methods=['GET', 'POST'])
+@app.route('/add_shots', methods=['GET', 'POST'])
 @login_required
-def add_shots(roundID):
-    round_data = Round.query.get_or_404(roundID)
-    course = Course.query.get_or_404(round_data.course_id)
-    tee_id = round_data.tee_id
-    holes = Hole.query.filter_by(courseID=course.courseID, teeID=tee_id).order_by(Hole.number).all()
+def add_shots():
+    # Pull the draft from the session
+    draft = session.get('new_round')
+    if not draft:
+        flash("Please choose a course & tee first.", "warning")
+        return redirect(url_for('add_round'))
+
+    # Look up course and holes for the form
+    course = Course.query.get_or_404(draft['course_id'])
+    holes  = Hole.query.filter_by(
+                courseID=course.courseID,
+                teeID=draft['tee_id']
+            ).order_by(Hole.number).all()
 
     if request.method == 'POST':
-        round_score = 0
+        # 1) Create the Round but don’t commit yet
+        try:
+            date_obj = datetime.strptime(draft['date_played'], "%Y-%m-%d").date()
+        except ValueError:
+            flash("Bad date format in session; please start over.", "error")
+            session.pop('new_round', None)
+            return redirect(url_for('add_round'))
 
-        # We'll store all new shots here temporarily before adding to DB
+        new_round = Round(
+            userID      = current_user.userID,
+            course_id   = draft['course_id'],
+            tee_id      = draft['tee_id'],
+            round_type  = draft['round_type'],
+            date_played = date_obj
+        )
+        db.session.add(new_round)
+        db.session.flush()   # so new_round.roundID is available
+
+        # 2) Build Shot & HoleStats objects
         all_new_shots = []
+        round_score   = 0
 
         for hole in holes:
-            num_shots = 1
-            hole_penalty_shots = 0
-
-            # We'll keep track of the "real" shots in this hole
             hole_shots_list = []
+            hole_penalty_shots = 0
+            num_shots = 1
 
+            # gather each shot for this hole
             while True:
-                distance_str = request.form.get(f"hole_{hole.number}_shot_{num_shots}_distance")
-                lie = request.form.get(f"hole_{hole.number}_shot_{num_shots}_lie")
-                if not distance_str or not lie:
-                    # If these fields are missing, we're done with this hole
+                dist_key = f"hole_{hole.number}_shot_{num_shots}_distance"
+                lie_key  = f"hole_{hole.number}_shot_{num_shots}_lie"
+                if not request.form.get(dist_key) or not request.form.get(lie_key):
                     break
 
-                distance = float(distance_str)
-                out_of_bounds = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_out_of_bounds") == "1")
-                hazard = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_hazard") == "1")
-                miss_direction = request.form.get(
-                    f"hole_{hole.number}_shot_{num_shots}_miss_direction", "None"
-                )
-                club = request.form.get(f"hole_{hole.number}_shot_{num_shots}_club", None)
+                distance_str = request.form.get(dist_key)
+                lie          = request.form.get(lie_key)
+                distance     = float(distance_str)
+                out_of_bounds = (request.form.get(f"{dist_key.replace('_distance','')}_out_of_bounds") == "1")
+                hazard        = (request.form.get(f"{dist_key.replace('_distance','')}_hazard") == "1")
+                miss_dir      = request.form.get(f"hole_{hole.number}_shot_{num_shots}_miss_direction", "None")
+                club          = request.form.get(f"hole_{hole.number}_shot_{num_shots}_club", None)
+                short_sided   = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_short_sided") == "1")
 
-                # Check if short_sided was checked in the form
-                short_sided = (request.form.get(f"hole_{hole.number}_shot_{num_shots}_short_sided") == "1")
+                # look ahead for distance_after / lie_after
+                next_dist = request.form.get(f"hole_{hole.number}_shot_{num_shots+1}_distance")
+                next_lie  = request.form.get(f"hole_{hole.number}_shot_{num_shots+1}_lie")
+                distance_after = float(next_dist) if next_dist else 0.0
+                lie_after      = next_lie if next_lie else "In the Hole"
 
-                # figure out distance_after/lie_after
-                distance_after = 0.0
-                lie_after = "In the Hole"
-                if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance"):
-                    distance_after = float(request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_distance"))
-                if request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_lie"):
-                    lie_after = request.form.get(f"hole_{hole.number}_shot_{num_shots + 1}_lie")
-
-                # Calculate strokes gained
+                # strokes gained
                 if out_of_bounds:
                     sg = SG_calculator(distance, lie, distance_after, "OOB")
                     hole_penalty_shots += 1
                 else:
                     sg = SG_calculator(distance, lie, distance_after, lie_after)
-
                 if hazard:
                     sg -= 1
                     hole_penalty_shots += 1
@@ -680,86 +736,72 @@ def add_shots(roundID):
                 shot_type = shot_type_func(lie=lie, distance=distance, par=hole.par)
 
                 new_shot = Shot(
-                    roundID=roundID,
-                    holeID=hole.holeID,
-                    distance_before=distance,
-                    lie_before=lie,
-                    distance_after=distance_after,
-                    lie_after=lie_after,
-                    shot_type=shot_type,
-                    strokes_gained=sg,
-                    miss_direction=miss_direction,
-                    club=club,
-                    short_sided=short_sided  # <-- store the user’s checkbox
+                    roundID         = new_round.roundID,
+                    holeID          = hole.holeID,
+                    distance_before = distance,
+                    lie_before      = lie,
+                    distance_after  = distance_after,
+                    lie_after       = lie_after,
+                    shot_type       = shot_type,
+                    strokes_gained  = sg,
+                    miss_direction  = miss_dir,
+                    club            = club,
+                    short_sided     = short_sided
                 )
-
-                # Add to our hole-local list
                 hole_shots_list.append(new_shot)
                 num_shots += 1
 
-            # Now that we have the hole’s shots in hole_shots_list, 
-            #  check if any shot has short_sided=1. If so, 
-            #  set the preceding shot's short_sided=1 if that preceding shot is Approach.
+            # propagate short_sided back to an Approach if needed
             for i, s in enumerate(hole_shots_list):
-                if s.short_sided:
-                    # If this shot is short_sided, mark the previous shot if it is approach
-                    if i > 0:  # there is a previous shot
-                        prev_shot = hole_shots_list[i - 1]
-                        if prev_shot.shot_type == "Approach":
-                            prev_shot.short_sided = True
+                if s.short_sided and i > 0:
+                    prev = hole_shots_list[i-1]
+                    if prev.shot_type == "Approach":
+                        prev.short_sided = True
 
-            # Now we can add them all to the DB and compute the hole’s score
-            # note: hole_score = (# of real shots) + penaltyShots
+            # compute hole score & accumulate
             hole_score = len(hole_shots_list) + hole_penalty_shots
             round_score += hole_score
-
-            # Add to the master list
             all_new_shots.extend(hole_shots_list)
 
-            # If hole_score > 0, update the holeStats
-            if hole_score > 0:
-                hole_stat = HoleStats.query.filter_by(roundID=roundID, holeID=hole.holeID).first()
-                if not hole_stat:
-                    hole_stat = HoleStats(roundID=roundID, holeID=hole.holeID)
-                    db.session.add(hole_stat)
-                hole_stat.hole_score = hole_score
+            # update or create HoleStats
+            stat = HoleStats.query.filter_by(roundID=new_round.roundID, holeID=hole.holeID).first()
+            if not stat:
+                stat = HoleStats(roundID=new_round.roundID, holeID=hole.holeID)
+                db.session.add(stat)
+            stat.hole_score = hole_score
 
-        # Once all holes are processed, insert the new shots
+        # 3) Persist all shots & stats in one commit
         for shot in all_new_shots:
             db.session.add(shot)
 
+        # post‐processing: GIR/fairway, aggregated SG, total score
+        db.session.commit()
+        update_gir_fairway(new_round.roundID, holes)
+
+        # aggregate strokes gained by category
+        sg_off_tee      = db.session.query(func.sum(Shot.strokes_gained)).filter_by(roundID=new_round.roundID, shot_type="Off the Tee").scalar() or 0.0
+        sg_approach     = db.session.query(func.sum(Shot.strokes_gained)).filter_by(roundID=new_round.roundID, shot_type="Approach").scalar() or 0.0
+        sg_around_green = db.session.query(func.sum(Shot.strokes_gained)).filter_by(roundID=new_round.roundID, shot_type="Around the Green").scalar() or 0.0
+        sg_putting      = db.session.query(func.sum(Shot.strokes_gained)).filter_by(roundID=new_round.roundID, shot_type="Putting").scalar() or 0.0
+
+        new_round.sg_off_tee      = sg_off_tee
+        new_round.sg_approach     = sg_approach
+        new_round.sg_around_green = sg_around_green
+        new_round.sg_putting      = sg_putting
+        new_round.score           = round_score
+
+        tee = Tee.query.get_or_404(draft['tee_id'])
+        new_round.score_to_par = round_score - tee.course_par
+
         db.session.commit()
 
-        # Then do any post-processing updates, e.g. GIR/fairway, aggregated strokes gained, etc.
-        update_gir_fairway(roundID, holes)
-        sg_off_tee = db.session.query(func.sum(Shot.strokes_gained)).filter(
-            Shot.roundID == roundID, Shot.shot_type == "Off the Tee"
-        ).scalar() or 0.0
-        sg_approach = db.session.query(func.sum(Shot.strokes_gained)).filter(
-            Shot.roundID == roundID, Shot.shot_type == "Approach"
-        ).scalar() or 0.0
-        sg_around_green = db.session.query(func.sum(Shot.strokes_gained)).filter(
-            Shot.roundID == roundID, Shot.shot_type == "Around the Green"
-        ).scalar() or 0.0
-        sg_putting = db.session.query(func.sum(Shot.strokes_gained)).filter(
-            Shot.roundID == roundID, Shot.shot_type == "Putting"
-        ).scalar() or 0.0
+        # 4) clean up session and redirect
+        session.pop('new_round', None)
+        return redirect(url_for('dashboard'))
 
-        round_data.sg_off_tee = sg_off_tee
-        round_data.sg_approach = sg_approach
-        round_data.sg_around_green = sg_around_green
-        round_data.sg_putting = sg_putting
-        round_data.score = round_score
+    # GET: render the shots‐entry form
+    return render_template('add_shots.html', course=course, holes=holes)
 
-        # Compute round score to par
-        this_tee = Tee.query.get_or_404(tee_id)
-        round_data.score_to_par = round_score - this_tee.course_par
-
-        db.session.commit()
-        return redirect('/dashboard')
-
-    # GET request - just render the template
-    return render_template('add_shots.html', round_data=round_data, course=course, tee_id=tee_id, holes=holes)
 
 # Route where the user's rounds are stored
 @app.route('/my_rounds', methods=['GET', 'POST'])
