@@ -74,9 +74,11 @@ Home - GolfOptimise
 
 
 <!-- How It Works Section (Responsive Layout for Mobile and Desktop) -->
+<!-- How It Works Section (Responsive Layout for Mobile and Desktop) -->
 <section class="how-it-works-section py-5 bg-light">
   <div class="container">
     <h2 class="section-title text-center mb-5">How It Works</h2>
+
     <div class="row">
       <!-- Step 1 -->
       <div class="col-lg-4 mb-4">
@@ -84,42 +86,80 @@ Home - GolfOptimise
           <div class="step-text text-center">
             <div class="step-number">1</div>
             <h4>Track Your Rounds</h4>
-            <p>Quickly log rounds in minutes with our easy to use form. Save the courses you frequently play to our database for ease.</p>
+            <p>
+              Quickly log rounds in minutes with our easy-to-use form.  
+              Save the courses you frequently play to our database for ease.
+            </p>
           </div>
           <div class="step-image text-center">
-            <img src="{{ url_for('static', filename='images/step-1.png') }}" alt="Track Your Rounds" class="img-fluid">
+            <img
+              src="{{ url_for('static', filename='images/step-1.png') }}"
+              alt="Track Your Rounds"
+              class="img-fluid"
+            >
           </div>
         </div>
       </div>
+
       <!-- Step 2 -->
       <div class="col-lg-4 mb-4">
         <div class="step-item">
           <div class="step-text text-center">
             <div class="step-number">2</div>
             <h4>Get Actionable Insights</h4>
-            <p>View your personalised dashboard with strokes gained analytics, breakdowns of each element of your game plus much more.</p>
+            <p>
+              View your personalised dashboard with strokes-gained analytics,  
+              breakdowns of each element of your game, plus much more.
+            </p>
           </div>
           <div class="step-image text-center">
-            <img src="{{ url_for('static', filename='images/step-3.png') }}" alt="Get Actionable Insights" class="img-fluid">
+            <img
+              src="{{ url_for('static', filename='images/step-3.png') }}"
+              alt="Get Actionable Insights"
+              class="img-fluid"
+            >
           </div>
         </div>
       </div>
+
       <!-- Step 3 -->
       <div class="col-lg-4 mb-4">
         <div class="step-item">
           <div class="step-text text-center">
             <div class="step-number">3</div>
-            <h4>Golf Smarter & Improve</h4>
-            <p>Data doesn't lie! Use your dashboard to see where your strenths and weaknesses lie, so you can practice more efficiently and shoot lower scores!</p>
+            <h4>Golf Smarter &amp; Improve</h4>
+            <p>
+              Data doesn't lie! Use your dashboard to see where your strengths  
+              and weaknesses lie so you can practise more efficiently and shoot
+              lower scores.
+            </p>
           </div>
           <div class="step-image text-center">
-            <img src="{{ url_for('static', filename='images/mobile_example.png') }}" alt="Golf Smarter & Improve" class="img-fluid">
+            <img
+              src="{{ url_for('static', filename='images/mobile_example.png') }}"
+              alt="Golf Smarter & Improve"
+              class="img-fluid"
+            >
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Responsive YouTube video -->
+    <div class="container mt-4">
+      <div class="ratio ratio-16x9"> <!-- Bootstrap-5 utility; see note below for BS-4 -->
+        <iframe
+          src="https://www.youtube.com/embed/1G2ltEiSYBw?si=3fhRtI45HGr0wO9n"
+          title="How GolfOptimise works"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+      </div>
+    </div>
   </div>
 </section>
+
 
 
 <!-- Testimonials Section (Full-Width) -->
