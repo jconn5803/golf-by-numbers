@@ -28,6 +28,21 @@ fetch("/config")
         .then(data => stripe.redirectToCheckout({ sessionId: data.sessionId }))
         .catch(console.error);
     });
+    
+    // PRO Release button
+    document.querySelector("#releaseBtn").addEventListener("click", () => {
+      if (!isAuthenticated) {
+        return window.location.href = "/register";
+      }
+      if (subscriptionActive) {
+        return window.location.href = "/dashboard";
+      }
+      // not subscribed yet: kick off Stripe checkout
+      fetch("/create-checkout-session?product_type=release")
+        .then(r => r.json())
+        .then(data => stripe.redirectToCheckout({ sessionId: data.sessionId }))
+        .catch(console.error);
+    });
 
     // PRO YEARLY button
     document.querySelector("#annualBtn").addEventListener("click", () => {

@@ -57,6 +57,7 @@ stripe_keys = {
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"],
     "price_id": os.environ["STRIPE_MONTHLY_PRICE_ID"],
     "annual_price_id": os.environ["STRIPE_ANNUAL_PRICE_ID"],
+    "release_price_id": os.environ["STRIPE_RELEASE_PRICE_ID"],
 }
 
 stripe.api_key = stripe_keys["secret_key"]
@@ -148,12 +149,12 @@ def create_checkout_session():
     # Choose the price ID based on the product type
     if product_type == "annual":
         price_id = stripe_keys["annual_price_id"]
-    if product_type == "daily":
-        price_id = stripe_keys["daily_price_id"]
+    elif product_type == "release":
+        price_id = stripe_keys["release_price_id"]
     else: # This is monthly
         price_id = stripe_keys["price_id"]
 
-    domain_url = "http://127.0.0.1:5000/recurring_payment_demo"
+    domain_url = "http://golfoptimise.com/"
     stripe.api_key = stripe_keys["secret_key"]
 
     try:
@@ -166,7 +167,7 @@ def create_checkout_session():
             # example: client_reference_id=user.id,
             client_reference_id=current_user.get_id(),
             success_url=domain_url + "_success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=domain_url + "_cancel",
+            cancel_url=domain_url + "pricing",
             payment_method_types=["card"],
             mode="subscription",
             line_items=[
