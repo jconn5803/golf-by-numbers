@@ -319,7 +319,7 @@ async function updateStrokesGainedChart(params) {
   const yMin = d3.min(sgData.values, d => d);
   const yMax = d3.max(sgData.values, d => d);
   const y = d3.scaleLinear()
-    .domain([Math.min(0, yMin), yMax])
+    .domain([Math.min(0, yMin), Math.max(1, yMax)])
     .nice()
     .range([height, 0]);
 
@@ -608,7 +608,7 @@ async function updateSgChart(containerId, endpointUrl, sgField) {
     const yMin = d3.min(data, d => Math.min(d[sgField], d.rollingAvg));
     const yMax = d3.max(data, d => Math.max(d[sgField], d.rollingAvg));
     const yScale = d3.scaleLinear()
-      .domain([Math.min(0, yMin), yMax])
+      .domain([Math.min(0, yMin), Math.max(0, yMax)])
       .nice()
       .range([height, 0]);
 
