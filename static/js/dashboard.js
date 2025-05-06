@@ -319,7 +319,7 @@ async function updateStrokesGainedChart(params) {
   const yMin = d3.min(sgData.values, d => d);
   const yMax = d3.max(sgData.values, d => d);
   const y = d3.scaleLinear()
-    .domain([Math.min(0, yMin), yMax])
+    .domain([Math.min(0, yMin), Math.max(1, yMax)])
     .nice()
     .range([height, 0]);
 
