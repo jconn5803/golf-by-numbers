@@ -71,4 +71,51 @@ function updateHoleNumbers(numHoles) {
       });
     });
   });
-  
+
+
+
+  // ——————————————
+// Intercept the “Save Holes” click
+// ——————————————
+document.addEventListener('DOMContentLoaded', () => {
+  const holesForm = document.querySelector('form[action$="/add_holes"]');
+  const modalEl  = document.getElementById('holesConfirmationModal');
+  const modal    = new bootstrap.Modal(modalEl);
+
+  holesForm.addEventListener('submit', e => {
+    e.preventDefault();
+
+    // 1) Number of holes (9 or 18)
+    const numHoles = parseInt(
+      document.querySelector('input[name="num_holes"]:checked').value, 10
+    );
+
+    // 2) Sum total distance
+    let totalDistance = 0;
+    document.querySelectorAll('#holes_table input[name="distances"]').forEach(input => {
+      const v = parseInt(input.value, 10);
+      if (!isNaN(v)) totalDistance += v;
+    });
+
+    // 3) Sum total par
+    let totalPar = 0;
+    for (let i = 1; i <= numHoles; i++) {
+      const sel = document.querySelector(`input[name="par_${i}"]:checked`);
+      if (sel) totalPar += parseInt(sel.value, 10);
+    }
+
+    // 4) Fill the modal fields
+    document.getElementById('confirm-num-holes').textContent        = numHoles;
+    document.getElementById('confirm-total-distance').textContent   = totalDistance;
+    document.getElementById('confirm-total-par').textContent        = totalPar;
+
+    // 5) Show the modal
+    modal.show();
+  });
+
+  // When the user confirms in the modal…
+  document.getElementById('confirm-holes-submit').addEventListener('click', () => {
+    modal.hide();
+    holesForm.submit();
+  });
+});
