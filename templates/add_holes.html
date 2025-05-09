@@ -64,6 +64,44 @@
     </div>
 
   </form>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="holesConfirmationModal" tabindex="-1"
+    aria-labelledby="holesConfirmationModalLabel" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered">
+   <div class="modal-content">
+     <!-- header -->
+     <div class="modal-header">
+       <h5 class="modal-title" id="holesConfirmationModalLabel">
+         Confirm Holes Setup
+       </h5>
+       <button type="button" class="btn-close"
+               data-bs-dismiss="modal" aria-label="Close"></button>
+     </div>
+     <!-- body -->
+     <div class="modal-body">
+       <p><strong>Number of Holes:</strong>
+          <span id="confirm-num-holes"></span>
+       </p>
+       <p><strong>Total Yardage:</strong>
+          <span id="confirm-total-distance"></span> yards
+       </p>
+       <p><strong>Total Par:</strong>
+          <span id="confirm-total-par"></span>
+       </p>
+       <p><strong>Tee Name:</strong> {{ tee_name }}</p>
+     </div>
+     <!-- footer -->
+     <div class="modal-footer">
+       <button type="button" class="btn btn-secondary"
+               data-bs-dismiss="modal">Go Back</button>
+       <button type="button" class="btn btn-primary"
+               id="confirm-holes-submit">Save Holes</button>
+     </div>
+   </div>
+ </div>
+</div>
+
 </div>
 {% endblock %}
 

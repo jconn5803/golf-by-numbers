@@ -226,4 +226,73 @@
     cursor: pointer;
   }
 
-  
+  /********************************************
+  Confirmation Modal Styling
+********************************************/
+#confirmationModal .modal-content {
+  max-width: 500px;
+  margin: 1.5rem auto;            /* center and give some top/bottom space */
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  background-color: #fff;
+}
+
+/* Header */
+#confirmationModal .modal-header {
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+  border-radius: 8px 8px 0 0;
+  padding: 0.75rem 1rem;
+}
+#confirmationModal .modal-title {
+  color: #333;
+  font-weight: 600;
+}
+#confirmationModal .btn-close {
+  filter: brightness(0) saturate(100%) invert(25%) sepia(7%) saturate(0%)
+          hue-rotate(290deg) brightness(93%) contrast(89%);
+}
+
+/* Body */
+#confirmationModal .modal-body {
+  padding: 1rem;
+}
+#confirmationModal .modal-body p {
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+#confirmationModal .modal-body strong {
+  font-weight: 600;
+}
+
+/* Footer buttons */
+#confirmationModal .modal-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #ddd;
+  border-radius: 0 0 8px 8px;
+}
+#confirmationModal .btn-primary {
+  background-color: #ffc107;
+  color: #000;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+#confirmationModal .btn-primary:hover {
+  background-color: #e0a800;
+  color: #fff;
+}
+#confirmationModal .btn-secondary {
+  background-color: #fff;
+  color: #333;
+  font-weight: 600;
+  border: 2px solid #333;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+#confirmationModal .btn-secondary:hover {
+  background-color: #333;
+  color: #fff;
+}
