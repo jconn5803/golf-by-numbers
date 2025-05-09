@@ -295,6 +295,10 @@ def about():
 def pricing():
     return render_template('pricing.html')
 
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
+
 
 # Route for user signup
 app.config.update(
