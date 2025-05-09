@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %} Contact - GolfOptimise{% endblock %}
+
+{% block extra_css %}
+  <!-- Page-specific CSS for the Pricing page -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Pricing Section (Full-Width) -->
+<section class="contact-section py-5">
+    <div class="container text-start">
+      <p>
+        <a  class="custom-form-label" style="font-size: 1.25rem; color: #333;">
+          james@golfoptimise.com
+        </a>
+      </p>
+    </div>
+  </section>
+{% endblock %}
+
