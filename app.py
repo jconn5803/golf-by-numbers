@@ -519,10 +519,10 @@ def add_course():
 @login_required
 @subscription_required
 def add_tee(course_id):
-    # If we were called with a course_id param, treat that as picking an existing course:
+    # If called with course_id, pick existing
     if course_id is not None:
-        session.pop('new_course', None)      # clear any “new-course” draft
-        session['course_id'] = course_id    # store the existing course
+        session.pop('new_course', None)
+        session['course_id'] = course_id
 
     course_draft = session.get('new_course')
     existing_id  = session.get('course_id')
@@ -531,102 +531,100 @@ def add_tee(course_id):
         flash("Please select or create a course first.", "warning")
         return redirect(url_for('add_course'))
 
+    # POST: only tee name now
     if request.method == 'POST':
-        tee_name   = request.form.get('name', '').strip()
-        course_par = request.form.get('course_par', type=int)
-
-        if not tee_name or course_par is None:
-            flash("Please enter both a tee name and its par.", "error")
-            # pass down either the draft or the real Course object
+        tee_name = request.form.get('name', '').strip()
+        if not tee_name:
+            flash("Please enter a tee name.", "error")
             course = course_draft or Course.query.get_or_404(existing_id)
             return render_template('add_tee.html', course=course), 400
 
-        # stash tee info, but do NOT commit yet
-        session['new_tee'] = {
-            'name':       tee_name,
-            'course_par': course_par
-        }
+        session['new_tee'] = { 'name': tee_name }
         return redirect(url_for('add_holes'))
 
-    # GET: show form, supplying whatever course we have
-    if course_draft:
-        course = course_draft
-    else:
-        course = Course.query.get_or_404(existing_id)
-
+    # GET: render form
+    course = course_draft or Course.query.get_or_404(existing_id)
     return render_template('add_tee.html', course=course)
 
 
-
+# STEP 3: collect holes, then write course (if new), tee & holes all at once
 # STEP 3: collect holes, then write course (if new), tee & holes all at once
 @app.route('/add_holes', methods=['GET', 'POST'])
 @login_required
 @subscription_required
 def add_holes():
+    # retrieve whatever we drafted so far
     course_draft = session.get('new_course')
     course_id    = session.get('course_id')
     tee_draft    = session.get('new_tee')
 
+    # guard: must have tee name and either a new_course draft or existing course_id
     if not tee_draft or not (course_draft or course_id):
         flash("Missing data—please start from the beginning.", "warning")
         return redirect(url_for('add_course'))
 
     if request.method == 'POST':
+        # --- 1) grab hole inputs ---
         num_holes = int(request.form.get('num_holes', 18))
-        distances = request.form.getlist('distances')
-        pars      = [int(request.form.get(f'par_{i+1}', 4)) for i in range(num_holes)]
+        distances = request.form.getlist('distances')  # list of strings
+        # build list of ints for each par_X
+        pars = [int(request.form.get(f'par_{i+1}', 4)) for i in range(num_holes)]
 
+        # validate we have one distance per hole
         if len(distances) < num_holes:
             flash("Please enter a distance for every hole.", "error")
             return render_template('add_holes.html', tee_name=tee_draft['name']), 400
 
-        # 1) If new course, insert it
+        # --- 2) if this is a new course, insert it ---
         if course_draft:
             new_course = Course(
                 name     = course_draft['name'],
                 location = course_draft['location']
             )
             db.session.add(new_course)
-            db.session.flush()
+            db.session.flush()   # so new_course.courseID is populated
             target_course_id = new_course.courseID
         else:
             target_course_id = course_id
 
-        # 2) Insert the new tee
-        total_dist = sum(int(distances[i] or 0) for i in range(num_holes))
+        # --- 3) insert the new Tee, computing both total_distance & course_par here ---
+        total_distance = sum(int(distances[i] or 0) for i in range(num_holes))
+        total_par      = sum(pars)
+
         new_tee = Tee(
             name           = tee_draft['name'],
-            total_distance = total_dist,
-            course_par     = tee_draft['course_par'],
+            total_distance = total_distance,
+            course_par     = total_par,
             courseID       = target_course_id
         )
         db.session.add(new_tee)
-        db.session.flush()
+        db.session.flush()   # so new_tee.teeID is populated
         target_tee_id = new_tee.teeID
 
-        # 3) Insert all holes
+        # --- 4) insert each Hole row ---
         for i in range(num_holes):
             hole = Hole(
                 courseID = target_course_id,
                 teeID    = target_tee_id,
-                number   = i+1,
+                number   = i + 1,
                 par      = pars[i],
                 distance = int(distances[i] or 0)
             )
             db.session.add(hole)
 
-        # 4) Commit everything together
+        # --- 5) commit everything in one shot ---
         db.session.commit()
 
-        # 5) Clean up session
+        # --- 6) clean up our session drafts and move on ---
         session.pop('new_course', None)
         session.pop('course_id',   None)
         session.pop('new_tee',     None)
 
         return redirect(url_for('add_round'))
 
-    # GET
+    # GET: render the form
     return render_template('add_holes.html', tee_name=tee_draft['name'])
+
 
 
 @app.route('/add_round', methods=['GET', 'POST'])
