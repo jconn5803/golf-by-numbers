@@ -162,6 +162,32 @@
     </div>
 
   </form>
+
+
+  <!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- header -->
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmationModalLabel">Confirm Round Submission</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <!-- body with placeholders -->
+      <div class="modal-body">
+        <p><strong>Course:</strong> {{ course.name }}</p>
+        <p><strong>Date:</strong> {{ date_played }}</p>
+        <p><strong>Total Strokes:</strong> <span id="confirm-score">–</span></p>
+      </div>
+      <!-- footer buttons -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go Back</button>
+        <button type="button" class="btn btn-primary" id="confirm-submit-btn">Submit Round</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 {% endblock %}
 

@@ -701,3 +701,34 @@ document.addEventListener("DOMContentLoaded", function() {
         updateClubSelect(holeNumber, 1, par);
     });
 });
+
+
+
+// 8) INTERCEPT FORM SUBMIT → SHOW CONFIRMATION MODAL
+const form = document.getElementById('add-shots-form');
+const confirmationModalEl = document.getElementById('confirmationModal');
+const confirmationModal = new bootstrap.Modal(confirmationModalEl);
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();  // stop real submit
+
+  // 1) compute total strokes = count of .shot-card across all holes
+  let totalStrokes = 0;
+  document.querySelectorAll('.shots-container').forEach(container => {
+    totalStrokes += container.querySelectorAll('.shot-card').length;
+  });
+
+  // 2) fill the modal
+  document.getElementById('confirm-score').textContent = totalStrokes;
+
+  // 3) show it
+  confirmationModal.show();
+});
+
+// When user clicks “Submit Round” in the modal, really submit the form
+document
+  .getElementById('confirm-submit-btn')
+  .addEventListener('click', () => {
+    confirmationModal.hide();
+    form.submit();
+  });

@@ -801,7 +801,7 @@ def add_shots():
         return redirect(url_for('dashboard'))
 
     # GET: render the shots‐entry form
-    return render_template('add_shots.html', course=course, holes=holes)
+    return render_template('add_shots.html', course=course, holes=holes, date_played=draft['date_played'])
 
 
 # Route where the user's rounds are stored
